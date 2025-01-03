@@ -1,0 +1,225 @@
+---
+title: "Proteomics Data Analysis Using R Studio"
+author: "Natalie Turner"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# Week 2: Data Visualization with mixOmics
+### Session 1: Introduction to mixOmics
+Introduction to the mixOmics package
+
+Loading and preparing data for mixOmics
+Overview of multivariate data analysis
+
+Run the first two lines of code below to load the mixOmics library and the "breast.TCGA" dataset contained therein.
+In the R Environment tab, click on the breast.TCGA data and visually inspect the format of the data.
+What do you notice about the way the data is arranged?
+
+This session, we will create 2 types of sample plots using the breast.TCGA dataset within the mixOmics package; a principal component analysis (PCA) and partial least squares discriminant analysis (PLS-DA)
+
+```{r Week 2 Session 1: Intro to mixOmics, visualizing Data with mixOmics, warning=FALSE}
+# Load the mixOmics library
+library(mixOmics)
+data("breast.TCGA")
+
+X <- breast.TCGA$data.train$protein
+Y <- breast.TCGA$data.train$subtype
+
+# PCA plot
+pca_result <- pca(X)
+plotIndiv(pca_result, group = breast.TCGA$data.train$subtype, 
+          legend = TRUE, title = "PCA of protein expression")
+
+# PLS-DA plot
+plsda_result <- plsda(X, Y)
+plotIndiv(plsda_result, group = breast.TCGA$data.train$subtype, 
+          legend = TRUE, title = "PLS-DA of protein expression")
+```
+
+
+Here you can see the difference between the 2 types of plots; however, PLS-DA plots can be optimized for variable/feature selection. This is not a feature of PCA plots.
+The below steps will allow you to optimize the PLS-DA plot according to the components that contribute the most to distinguishing between the control and treatment groups.
+
+We can visually inspect the component loadings to determine the optimal number of components to include in downstream analyses.
+
+```{r}
+
+# Extract the protein abundance data
+X <- breast.TCGA$data.train$protein
+Y <- breast.TCGA$data.train$subtype
+
+#Perform PCA on protein data
+pca.protein <- pca(X, ncomp = 10, center = TRUE, scale = TRUE)
+
+#Plot results
+plot(pca.protein)
+
+#Plot PCA using plotIndiv
+plotIndiv(pca.protein, ncomp = 2, ind.names = FALSE,
+          group = Y, style = "ggplot2",
+          ellipse = TRUE, size.xlabel = rel(2), size.ylabel = rel(2), cex = 4,
+          legend = TRUE, title = 'PCA on breast.TCGA protein data')
+
+# Select the optimal components for clustering
+pca_result <- pca(X, ncomp = 2)
+
+# Get the loadings for the heatmap
+loadings <- pca_result$loadings$X
+plot(loadings)
+
+# Create a heatmap
+heatmap.mat <- as.matrix(loadings)
+heatmap.mat[is.na(heatmap.mat)] <- 0 # Replace NAs with zeros for visualization
+
+# Plot the heatmap
+heatmap(heatmap.mat, Rowv = NA, Colv = NA, col = colorRampPalette(c("blue", "white", "red"))(100),
+        scale = "none", xlab = "Features", ylab = "Principal Components",
+        main = "Heatmap of PCA Loadings",
+        cexRow = 0.5, cexCol = 1)
+
+```
+
+Principal Component Analysis (PCA) Explanation:
+
+A Principal Component Analysis (PCA) plot is like a map for your data. It takes complex data and reduces its dimensions, making it easier to see patterns and relationships.
+
+In simple terms, a PCA plot helps you:
+
+Visualize Data: By showing data points in a two or three-dimensional space.
+
+Identify Patterns: By highlighting which data points are similar or different.
+
+Reduce Complexity: By focusing on the most important features that capture the most variation in the data.
+
+Imagine you have a dataset with many variables. PCA helps you see the big picture by reducing those variables to a few principal components (axes) that still capture the essence of the data.
+
+PLS-DA Explanation:
+
+A Partial Least Squares Discriminant Analysis (PLS-DA) plot is like a roadmap that helps you see how different groups of data points are related to each other.
+
+In simple terms, a PLS-DA plot helps with:
+
+Group Separation: It highlights how different groups (like control and treatment) are distinct from each other based on their characteristics.
+
+Patterns and Trends: It helps identify patterns and trends in the data that are important for distinguishing between groups.
+
+Key Features: It shows which features (or variables) are most important for differentiating between groups.
+
+Comparison with PCA:
+
+PCA is great for uncovering the overall structure and patterns in your data without prior group information.
+
+PLS-DA is better for distinguishing between specific groups and highlighting differences based on predefined classes.
+
+### Homework Task:
+Recreate the heatmap from this session at home.
+Extract the names of the Component 1 and Component 2 variables and save them as a .csv file.
+
+### Session 2: Formatting Data for mixOmics
+
+mixOmics assumes that data is pre-processed, cleaned, and normalized prior to data import.
+For this exercise, we'll be working with the HM and CM dataset from Session 1 and 2.
+
+First, we need to import the data, and clean/normalize (log transform) it.
+
+This time, we will also incorporate the MaxLFQ algorithm available in the diann package to get the protein quantities and compress the very long results file into the columns with sample names and the rows with variable names.
+
+We'll also create a boxplot of the pre- and post-normalization data to check that normalization has been successful.
+
+Normalization of proteomics data can be performed in a number of different ways - see publication by Tommi Välikangas, Tomi Suomi, Laura L Elo, "A systematic evaluation of normalization methods in quantitative label-free proteomics", Briefings in Bioinformatics, Volume 19, Issue 1, January 2018, Pages 1–11, https://doi.org/10.1093/bib/bbw095, for an overview of various methods and how they perform.
+
+In the following example, we will use the Quantile Normalization method (part of the 'limma' package).
+
+
+```{r Week 2 Session 2: Formatting data for mixOmics}
+# Load necessary libraries
+library(readr)
+library(dplyr)
+library(readxl)
+library(mixOmics)
+library(diann)
+library(limma)
+
+# Importing data as per Session 1
+raw_data <- read_csv("data/HM_CM_DIANN_report.csv", show_col_types = FALSE)
+raw_data_diann <- diann_load("data/HM_CM_DIANN_report.csv")
+
+# Annotate file
+annotations <- "data/annotations.xlsx"
+df_2_ann = read_xlsx(annotations, sheet = "annotations")
+
+# Merge results with annotations file by name of Run
+df_2_merged<-merge(raw_data, df_2_ann, by='Run')
+df_2_removed<-df_2_merged
+#Remove outliers
+df_2_removed<-subset(df_2_removed, df_2_removed$Outlier!="TRUE") 
+raw_data2 <- df_2_removed
+
+# Filtering rows to include variables with Protein Group Q Value < 0.01 (1% FDR filtering)
+filtered_data <- raw_data2 %>% filter(PG.Q.Value < 0.01)
+
+formatted_data <- diann_maxlfq(filtered_data,
+                               sample.header = "Run",
+                               group.header = "Protein.Group",
+                               id.header = "Precursor.Id",
+                               quantity.header = "Precursor.Normalised",
+                               margin = -2.0)
+
+# Handling missing values
+clean_data <- formatted_data %>% na.omit() #na.omit removes any variable/row that has a single missing value, denoted as 'NA'
+log_data <- log2(clean_data + 1)
+#make sure runs appear in alphanumerical order
+order((colnames(log_data)))
+#rename columns with Condition and BioReplicates
+colnames(log_data) <- c("HM1", "CM1","HM2","CM2","HM3","CM3","HM4")
+
+#alternative
+colnames(log_data) <- df_2_ann$Condition[1:7]
+
+#create boxplot of data before normalization
+pre_norm <- as.data.frame(log_data)
+par(las = 1) # all axis labels horizontal
+boxplot(pre_norm, main = "Boxplot of Cleaned/Log transformed data (no normalization)", horizontal = TRUE)
+
+#apply normalization
+final_data <- normalizeQuantiles(log_data)
+
+#create boxplot of data after normalization
+post_norm <- as.data.frame(final_data)
+par(las = 1) # all axis labels horizontal
+boxplot(post_norm, main = "Boxplot of Normalized data", horizontal = TRUE)
+
+```
+As you can already see, there are many options for approaching data pre-processing in R, even if using just a couple of different R packages and R base functions. The more comfortable you become with being able to manipulate a dataset to extract the information you require, the more data processing options you will have.
+
+Now that we have read in and pre-processed our data, we can create a nested list that we will call on during data processing in mixOmics.
+Lists for mixOmics can contain a number of elements that will vary depending on the type of analysis (see https://mixomics.org/methods/). In the example for this session, we will create a nested list that contains:
+1) the proteomics data (cleaned/log transformed/normalized)
+2) the groups of interest as factors (we'll call this element 'species' to distinguish between human and cow milk), and
+3) the list of protein names.
+
+In mixOmics, the data should be formatted with samples in rows and variables in columns.
+
+```{r}
+#create a nested list with the cleaned/log transformed data (X) and species as a factor (Y).
+class <- df_2_ann$Condition
+milk_data <- list(species = class,
+            data = t(final_data),
+            protein.name = raw_data$Protein.Names)
+
+#classify X and Y
+X <- milk_data$data
+Y <- milk_data$species
+```
+
+### Exercise
+Using the previous session as a guide, try creating a PCA plot of the data.
+
+### Extra exercise
+In the annotations file, change it so that there are no outliers.
+Now, perform the PCA plot including all three groups (HM, CM and PBQC).
+
+### Homework task:
+1. Work through the SRBCT case study (https://mixomics.org/case-studies/splsda-srbct-case-study/) to familiarize yourself with the sPLS-DA workflow. Even though this is gene-level data, the same workflow can be applied to proteomics data formatted in the same way.
+2. Generate the sample plots from Figures 6, 7 and 9, and provide a brief summary of what the plots show.

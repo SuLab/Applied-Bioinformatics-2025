@@ -1,0 +1,262 @@
+---
+title: "Proteomics Data Analysis Using R Studio"
+author: "Natalie Turner"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# Week 3: Differential Protein Abundance and Visualization with MSstats
+### Session 1: Introduction to MSstats
+
+Introduction to the MSstats package
+
+Here is the MSstats vignette:
+https://www.bioconductor.org/packages/devel/bioc/manuals/MSstats/man/MSstats.pdf
+
+### Data preparation for MSstats
+In previous sessions, we manually cleaned and log transformed the data from the HM and CM results file.
+MSstats is an R package that has built-in functions to perform these same tasks, as well as additional and more stringent criteria to filter low confidence peptides, plus many others. The MSstats vignette is a great resource and I encourage you to explore the different processing options in your own time.
+
+MSstats will take input from various upstream raw MS software tools, including Spectronaut, DIA-NN, and MaxQuant.
+The HM and CM raw MS data was processed using DIA-NN (https://github.com/vdemichev/DiaNN), so we will use the DIANNtoMSstatsFormat function to convert the DIA-NN results file to a usable dataframe for processing with MSstats.
+Note: The MSstatsFormat functions have recently been split into a separate package, 'MSstatsConvert'.
+
+```{r Week 3 Session 1: Intro to MSstats, message=FALSE, warning=FALSE}
+# Load the MSstats and MSstatsConvert libraries
+library(MSstats)
+library(MSstatsConvert)
+library(readr)
+library(readxl)
+library(dplyr)
+library(ggbiplot)
+
+# Load the downloaded dataset
+raw_data <- read_csv("data/HM_CM_DIANN_report.csv", show_col_types = FALSE)
+
+# Annotate file
+annotations <- "data/annotations.xlsx"
+df_2_ann = read_xlsx(annotations, sheet = "annotations")
+
+# Remove outliers
+# Merge results with annotations file by name of Run/PBQC runs removed--
+df_2_merged<-merge(raw_data, df_2_ann, by='Run')
+df_2_removed<-df_2_merged
+df_2_removed<-subset(df_2_removed, df_2_removed$Outlier!="TRUE")
+raw_data2 <- df_2_removed
+# Change header of column 22 for compatibility with MSstats pipeline
+colnames(raw_data2)[22] <- "Lib.PG.Q.Value"
+
+# Data preparation
+#Convert to MSstats
+final_df <- DIANNtoMSstatsFormat(raw_data2,
+  annotation = df_2_ann,
+  global_qvalue_cutoff = 0.01,
+  qvalue_cutoff = 0.01,
+  pg_qvalue_cutoff = 0.01,
+  useUniquePeptide = TRUE,
+  removeFewMeasurements = FALSE,
+  removeOxidationMpeptides = FALSE,
+  removeProtein_with1Feature = TRUE,
+  use_log_file = TRUE,
+  append = FALSE,
+  verbose = FALSE,
+  log_file_path = NULL,
+  MBR = TRUE,
+  progress=FALSE
+)
+
+# Process the data with MSstats dataprocess function
+ProcessedData <- dataProcess(final_df,
+                             logTrans = 2,
+                             normalization = "equalizeMedians",
+                             nameStandards = NULL,
+                             featureSubset = "topN",
+                             remove_uninformative_feature_outlier = TRUE,
+                             min_feature_count = 2,
+                             n_top_feature = 3,
+                             summaryMethod = "TMP",
+                             censoredInt = "NA",
+                             MBimpute = TRUE,
+                             remove50missing = FALSE,
+                             maxQuantileforCensored = 0.999,
+                             use_log_file = FALSE,
+                             append = FALSE,
+                             verbose = FALSE,
+                             log_file_path = NULL
+                             )
+
+
+```
+
+### Session 2: Differential Abundance Analysis and Volcano Plots
+Now we move to what is the mainstay of proteomics (and also other 'omics) data analysis - differential abundance analysis. We will work through the same steps as in the previous session to pre-process the data and convert it to MSstats format, but move on to perform a quantitative analysis between the two groups, HM and CM.
+For this, please refer to the MSstats vignette for a step-by-step guide to creating a comparison matrix. (https://www.bioconductor.org/packages/devel/bioc/manuals/MSstats/man/MSstats.pdf)
+
+```{r Week 3 Session 2: Differential abundance analysis and Volcano Plots, message=FALSE, warning=FALSE}
+# Load the MSstats library
+library(MSstats)
+library(MSstatsConvert)
+library(readr)
+library(readxl)
+library(dplyr)
+library(ggbiplot)
+
+# Load the downloaded dataset
+raw_data <- read_csv("data/HM_CM_DIANN_report.csv", show_col_types = FALSE)
+
+# Annotate file
+annotations <- "data/annotations.xlsx"
+df_2_ann = read_xlsx(annotations, sheet = "annotations")
+
+# Remove outliers
+# Merge results with annotations file by name of Run/PBQC runs removed--
+df_2_merged<-merge(raw_data, df_2_ann, by='Run')
+df_2_removed<-df_2_merged
+df_2_removed<-subset(df_2_removed, df_2_removed$Outlier!="TRUE")
+raw_data2 <- df_2_removed
+colnames(raw_data2)[22] <- "Lib.PG.Q.Value"
+
+# Data preparation
+# Convert to MSstats
+final_df <- DIANNtoMSstatsFormat(
+  raw_data2,
+  annotation = df_2_ann,
+  global_qvalue_cutoff = 0.01,
+  qvalue_cutoff = 0.01,
+  pg_qvalue_cutoff = 0.01,
+  useUniquePeptide = TRUE,
+  removeFewMeasurements = TRUE,
+  removeOxidationMpeptides = FALSE,
+  removeProtein_with1Feature = TRUE,
+  use_log_file = TRUE,
+  append = FALSE,
+  verbose = FALSE,
+  log_file_path = NULL,
+  MBR = TRUE,
+  progress=FALSE
+  )
+
+# Process the data with MSstats dataprocess function
+ProcessedData <- dataProcess(final_df,
+                             logTrans = 2,
+                             normalization = "equalizeMedians",
+                             nameStandards = NULL,
+                             featureSubset = "topN",
+                             remove_uninformative_feature_outlier = TRUE,
+                             min_feature_count = 2,
+                             n_top_feature = 3,
+                             summaryMethod = "TMP",
+                             censoredInt = "NA",
+                             MBimpute = TRUE,
+                             remove50missing = FALSE,
+                             maxQuantileforCensored = 0.999,
+                             use_log_file = FALSE,
+                             append = FALSE,
+                             verbose = FALSE,
+                             log_file_path = NULL
+                             )
+
+
+# Perform differential abundance analysis
+#PART 2: QC Plots----
+#Visualise data
+length(ProcessedData)
+
+# # Quality control plot - generates QC box plots of pre-processed data (checks for removal of systematic bias)
+dataProcessPlots(data=ProcessedData, type="QCPlot",
+                 ylimUp = FALSE,
+                 ylimDown = FALSE,
+                 x.axis.size = 20,
+                 y.axis.size = 20,
+                 text.size = 10,
+                 text.angle = 0,
+                 legend.size = 7,
+                 dot.size.profile = 5,
+                 dot.size.condition = 5,
+                 width = 10,
+                 height = 5,
+                 which.Protein = "allonly",
+                 originalPlot = FALSE,
+                 summaryPlot = TRUE,
+                 save_condition_plot_result = TRUE,
+                 remove_uninformative_feature_outlier = FALSE,
+                 address = "",
+                 isPlotly = FALSE)
+
+# Prepare data for groupComparison
+group_comparison_input <- MSstatsPrepareForGroupComparison(ProcessedData)
+
+# Matrix creation
+levels(ProcessedData$ProteinLevelData$GROUP) #gets group levels
+comparison<-matrix(c(-1,1),nrow=1) #creates comparison matrix
+row.names(comparison) <- c("HM-CM")
+groups = levels(ProcessedData$ProteinLevelData$GROUP) #create object with the groups as names of levels
+colnames(comparison) <- groups #uses previous command/object as colnames
+samples_info=getSamplesInfo(ProcessedData) #required input for MSstatsGroupComparison
+repeated=checkRepeatedDesign(ProcessedData) #required input for MSstatsGroupComparison
+
+# Differential analysis and volcano plot----
+#Perform MSstatsGroupComparison
+finalComparison <- MSstatsGroupComparison(group_comparison_input, comparison, FALSE, repeated, samples_info)
+
+# Extract differential protein analysis output
+ProteinResults <- MSstatsGroupComparisonOutput(finalComparison,group_comparison_input,log_base=2)
+
+# Generate volcano plot from results
+Volcano_Plot <- groupComparisonPlots(data=ProteinResults$ComparisonResult, 
+                                     type="VolcanoPlot",
+                                     sig = 0.05,
+                                     FCcutoff =1.5,
+                                     logBase.pvalue =10,
+                                     ylimUp = 3,  
+                                     ylimDown = FALSE,
+                                     xlimUp = FALSE,  
+                                     x.axis.size = 10,
+                                     y.axis.size = 10,
+                                     dot.size = 2,
+                                     text.size = 4,
+                                     text.angle = 0,
+                                     legend.size = 13,
+                                     ProteinName = FALSE,
+                                     colorkey = TRUE,
+                                     clustering = "both",
+                                     width = 10,
+                                     height = 10,
+                                     which.Comparison = "all",
+                                     which.Protein = "all",
+                                     address = FALSE
+                                     )
+
+```
+
+The Volcano_Plot function has many options that can be changed, such as labels, dot size, FDR and fold-change cut-off. Explore changes to these inputs to see how this changes the plot. When you are finished, save the plot to file.
+
+Also save the ProteinResults dataframe containing the ComparisonResults data to file using the write.csv function - given that the identities of the proteins are obscured in the plot, you can manually inspect the .csv file for the fold-change and adj p-value.
+
+
+# Real-world case study: Applying MSstats to the PRIDE dataset PXD039923
+
+### Capstone Task:
+
+Apply MSstats to the PRIDE dataset PXD039923 (HM and CM dataset, see publication: https://onlinelibrary.wiley.com/doi/full/10.1002/mnfr.202300404)
+
+1. MSstats and data formatting/pre_processing: Perform differential protein abundance analysis and generate a volcano plot.
+Replicate the volcano plot settings as per the published paper.
+  -  Remove trypsin and iRT proteins from the dataframe before processing.
+  -  Attempt to filter the results to include homologous peptide sequences (i.e., the same peptides detected in both species, not just 1) and plot these 
+results as your final analysis. If you are successful or unsuccessful, provide a brief summary of the various ways you tried to filter the results. Explain what you think the impact on the final results will be if all of the peptides (homologous and non-homologous) are used for quantification.
+  -  Create and save the volcano plot.
+
+2. mixOmics: data pre-processing, data visualization, data formatting:
+Create and save a PCA plot of HM, CM, and PBQC of the pre-processed data according to the paper. Adjust the size of the font, axes, or labels on the plots if needed so that it is clearly legible.
+
+3. Data filtering and extraction:
+a) Save the MSstats ComparisonResults output as a .csv file.
+b) Create additional results files containing the protein IDs (qualitative) for each group and only include proteins identified in at least 2 replicates per group.
+c) Use these results to create a Venn diagram and save the plot with the file name 'venn_HM and CM'.
+
+4. EnrichR: qualitative analysis:
+Perform an enrichment analysis of the differentially abundant proteins (up- and down-regulated) with EnrichR using the Molecular Function 2018 library. 
+  -  Display the top 20 enriched terms on the plots.
+  -  Make sure the entire name of the term is visible on the plot.
+  -  Save the plots with the file names 'enrichr_top20_up' and 'enrichr_top20_down'.
