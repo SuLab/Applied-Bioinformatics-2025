@@ -194,7 +194,7 @@
     },
     "Biostrings": {
       "Package": "Biostrings",
-      "Version": "2.74.0",
+      "Version": "2.74.1",
       "Source": "Bioconductor",
       "Repository": "Bioconductor 3.20",
       "Requirements": [
