@@ -1,0 +1,272 @@
+---
+title: "Proteomics Data Analysis Using R Studio - Week 1"
+author: "Natalie Turner"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+## Week 1: Data Import and Preprocessing
+
+### Session 1: Introduction to Data Import
+Introduction to importing proteomics data into R
+Hands-on practice with data import from various formats (e.g., CSV, Excel)
+
+Welcome to Module 1 of Applied Bioinformatics!
+In this module, we will cover some basic processing pipelines for proteomics data analysis, including data manipulation (formatting, cleaning, normalization), contaminant 'library' generation, exploratory plots and differential abundance analysis.
+
+Week 1 will be focused on the basics of data import and manipulation, and preparing your data for downstream analysis.
+
+Let's start with a practice dataset and annotations file.
+
+```{r Session 1: Intro to Data Import}
+# Load necessary libraries
+library(readr)
+library(dplyr)
+library(readxl)
+
+# Importing data
+raw_data <- read_csv("data/HM_CM_DIANN_report.csv", show_col_types = FALSE)
+
+# Annotate file
+annotations <- "data/annotations.xlsx"
+df_2_ann = read_xlsx(annotations, sheet = "annotations")
+df_2_ann <- df_2_ann[,1:4]
+
+# Remove outliers
+# EV runs selected/other runs removed--
+df_2_merged<-merge(raw_data, df_2_ann, by='Run')
+raw_data2 <-subset(df_2_merged, df_2_merged$Outlier!="TRUE")
+```
+
+### CamprotR
+Create list of contaminant proteins to remove (common Repository of Adventitious Proteins (cRAP))
+
+For this session, we will be following along with the online tutorial:
+https://cambridgecentreforproteomics.github.io/camprotR/articles/crap.html
+
+Although typically applied at the protein/peptide search level, it is important to be aware of these proteins in your proteomics results file.
+Contaminants may confound your results, introduce false positives, or interfere with differential abundance analysis, however they can also be used for QC. It's important to have a good understanding of your cRAP file, as the cRAP proteins contained in the .fasta file may vary from project to project.
+
+```{r Session 1: CamprotR for contaminant fasta file creation, warning=FALSE}
+# load required packages
+library(Biostrings)
+library(camprotR)
+library(httr)
+
+# create directory and set as working directory
+dir.create(path = "camprotR")
+setwd("camprotR")
+
+# create a temp file
+ccp_tmp <- tempfile(fileext = ".fasta")
+download_ccp_crap(ccp_tmp, is_crap = TRUE, verbose = TRUE, overwrite = TRUE) #downloads the Cambridge Centre for Proteomics cRAP file (CCP cRAP)
+
+# read temp file
+ccp_crap <- Biostrings::readAAStringSet(ccp_tmp)
+ccp_crap
+##Hint: Take note of the cRAP number.
+head(names(ccp_crap)) #displays first few rows of .fasta entries
+
+```
+
+Now you have some practice loading and viewing the cRAP .fasta file, let's practice making a custom one.
+The next block will run through how to append specific protein accessions directly to the ccp_cRAP file.
+We can then use the fasta.index function to extract specific information on the contaminants to place in a separate dataframe.
+
+```{r Session 1: Create custom .fasta, warning=FALSE}
+##Make your own cRAP database using sequences from Streptomyces griseus
+# download CCP cRAP and include Uniprot release date in the file name [This is important because accessions/entries can change with every new UniProt release, so it's essential to keep track!]
+
+setwd("camprotR")
+download_ccp_crap(paste0(check_uniprot_release(), "_CCP_cRAP.fasta"), overwrite = TRUE)
+griseus_tmp <- tempfile(fileext = ".fasta")
+make_fasta(accessions = c("P00776", "P00777", "P80561"),
+                file = griseus_tmp,
+                is_crap = FALSE)
+tail(names(ccp_crap)) #displays the last few rows of the CCP cRAP .fasta entries
+
+#Add the Streptomyces griseus accessions stored as 'griseus_tmp' to the ccp_tmp file. 
+append_fasta(
+  file1 = griseus_tmp,
+  file2 = ccp_tmp,
+  is_crap = TRUE,
+  crap_start = 1) #<-- edit this line to append the sequences by numbering from the of the .fasta.
+
+#view ccp_tmp file to confirm the entries have been added correctly.
+Biostrings::readAAStringSet(ccp_tmp)
+
+```
+
+### Exercise
+Make your own cRAP .fasta file by appending the following proteins to ccp_crap.
+
+```
+P02769
+P35747
+P08835
+P00761
+```
+
+Identify situations where it would be appropriate to remove these proteins from your results.
+
+# Removing cRAP proteins (or any troublesome proteins) from your results file
+
+Once you have identified possible contaminants, you can remove them from your dataset. This is possible whether or not they are known (annotated) cRAP, or other proteins that have been flagged but not annotated as cRAP.
+
+```{r Session 1: Extension - Removing proteins from a dataset}
+# Option 1: Create a string of protein names to remove
+proteins_to_remove <- 
+  c("K2C1_HUMAN","K1C10_HUMAN","TRYP_PIG")
+
+# Remove the proteins in the created list from the results dataframe using the %in% operator
+cRAP_removed1 <- raw_data2[!(raw_data2$Protein.Names %in% proteins_to_remove),]
+
+# Option 2: Filter results to remove proteins annotated as cRAP using an external list
+cRAP <- read_xlsx("data/cRAP proteins.xlsx")
+cRAP_removed2 <- raw_data2[!(raw_data2$Protein.Names %in% cRAP$Id),]
+
+# Option 3: Filter results to remove proteins annotated as iRT (iRT = indexed retention time calibrators) using the %like% operator from the data.table package
+library(data.table)
+cRAP_removed3 <- raw_data2[!(raw_data2$Protein.Group %like% "iRT protein"),]
+
+# Note - be sure to know which column to use for your search query; searching 'iRT protein' in 'Protein.Names' yields 0 removed entries!
+
+```
+
+### Session 2: Data Manipulation with dplyr
+Data cleaning techniques: handling missing values and outliers
+
+Data manipulation using dplyr
+
+Practical examples of data pre-processing
+
+Real-world case study: Pre-processing proteomics datasets
+
+Data cleaning refers to the process of filtering data to remove outliers and missing values. Some data pre-processing methods cannot handle missing values, so these variables must either be completely removed, or imputed via statistical methods. Many existing R packages have data cleaning functions built-in, but in this tutorial we will cover ways to perform this manually. This is useful when the downstream bioinformatics processing requires cleaned and normalized data as input.
+
+Firstly, let's read in the data and annotations file to inspect it within R studio.
+
+```{r Session 2: Data cleaning techniques}
+#Set working directory first##
+
+# Load necessary libraries
+library(readr)
+library(dplyr)
+library(readxl)
+
+# Importing data as per Session 1
+raw_data <- read_csv("data/HM_CM_DIANN_report.csv", show_col_types = FALSE) 
+
+#Annotate file
+annotations <- "data/annotations.xlsx"
+df_2_ann = read_xlsx(annotations, sheet = "annotations")
+
+```
+
+
+
+Annotations files are generally populated manually in Excel and read into R using the read_xlsx function (or similar), as above.
+
+With most R packages designed for proteomics analysis, as well as other non-R based open source software packages, there are four (4) essential columns in annotations files:
+1. Run <- The name of the MS data file corresponding to a particular sample run
+2. BioReplicate <- Usually reserved for biological replicate number, but can be assigned as a technical replicate number in certain situations.
+3. Condition <- The group that a sample belongs to i.e., control or treatment
+4. Outlier <- Whether this sample should be removed from analysis or not. The command for this is user-defined, but usually logical (TRUE/FALSE, or YES/NO).
+
+Populating your annotations file is absolutely critical and will save you a lot of headache if done correctly.
+
+You'll notice the raw_data dataframe has multiple (thousands) of entries per run. We need to edit the dataframe by annotating it according to the annotations file - we can do this with the merge function, according to Run name. We'll also remove the 'PBQC' samples from further analysis (denoted at Outliers in the annotations file).
+
+Note: One important R package update occurred after the original results file was generated, so we're going to overcome this by manually changing one of the column headers.
+
+```{r Session 2: Merging results and annotations dataframes}
+# Merge results with annotations file by name of Run
+df_2_merged<-merge(raw_data, df_2_ann, by='Run')
+df_2_removed<-df_2_merged
+# Remove outliers
+df_2_removed<-subset(df_2_removed, df_2_removed$Outlier!="TRUE") 
+raw_data2 <- df_2_removed
+# Change header of column 22 - for compatibility with MSstats (explored later on in the module)
+colnames(raw_data2)[22] <- "Lib.PG.Q.Value"
+
+```
+
+Go ahead and view the new dataframe by clicking on it in the R Environment tab (raw_data2).
+
+We will now start to filter, clean, and log transform the data by selecting the columns related to protein quantities and FDR.
+
+```{r Session 2: Filtering, cleaning, and log transformation}
+
+# Selecting specific columns
+selected_data <- raw_data2 %>% select(Run, Protein.Names, PG.MaxLFQ, PG.Q.Value)
+
+# Filtering rows to include variables with Protein Group Q Value < 0.01 (1% FDR filtering)
+filtered_data <- selected_data %>% filter(PG.Q.Value < 0.01)
+
+# Creating a new column for log-transformed expression values
+mutated_data <- filtered_data %>% mutate(Log2PG.MaxLFQ = log2(PG.MaxLFQ + 1))
+
+# Handling missing values
+clean_data <- mutated_data %>% na.omit() #na.omit removes any variable/row that has a single missing value, denoted as 'NA'
+
+```
+
+The filter and select functions can be used widely to manipulate a dataframe. For example, columns belonging to one particular group can be selected and inspected, and filtered based on criteria such as missing values, e.g., filter the results to include proteins that are detected in at least (x) number of replicates using the 'is.na' function. This information can then be extracted (saved to a .csv file) and used for qualitative analyses such as Venn diagrams and gene ontology.
+
+### Extension exercise: Enrichment analysis with EnrichR
+Let's change the above code to include the genes names as well. We can then perform a basic enrichment analysis by extracting the gene names and using the list as input for enrichR.
+
+```{r Session 2 (Extension): Enrichment analysis with EnrichR, message=FALSE, warning=FALSE}
+# Selecting specific columns
+selected_data <- raw_data2 %>% select(Run, Protein.Names, PG.MaxLFQ, PG.Q.Value) #Hint - change this line of code to include the column in the raw_data2 dataframe that contains the gene names
+
+# Filtering rows to include variables with Protein Group Q Value < 0.01 (1% FDR filtering)
+filtered_data <- selected_data %>% filter(PG.Q.Value < 0.01)
+
+# Creating a new column for log-transformed expression values
+mutated_data <- filtered_data %>% mutate(Log2PG.MaxLFQ = log2(PG.MaxLFQ + 1))
+
+# Handling missing values
+clean_data <- mutated_data %>% na.omit() #na.omit removes any variable/row that has a single missing value, denoted as 'NA'
+
+```
+
+By using the 'Help' tab in RStudio, you can view the EnrichR vignette. (Type 'enrichr' in the search bar and click on 'html' in the Vignettes search results.)
+The instructions for using EnrichR are shown in detail (see below).
+
+```{r}
+library(enrichR)
+
+websiteLive <- getOption("enrichR.live")
+if (websiteLive) {
+    listEnrichrSites()
+    setEnrichrSite("Enrichr") # Human genes   
+}
+
+if (websiteLive) dbs <- listEnrichrDbs()
+
+```
+
+You will see the list of EnrichR libraries in the R environment tab.
+View this list by clicking on it ("dbs").
+You can now choose a library to search against depending on your project.
+
+Follow the example from the vignette below using the extracted gene names from the HM and CM dataset. The head of the code is below, now it's up to you to fill in the rest!
+
+```{r Session 2 (Extension): EnrichR library selection}
+dbs <- c("GO_Molecular_Function_2015", "GO_Cellular_Component_2015", "GO_Biological_Process_2015")
+
+####Insert lines of code here/below#####
+
+```
+
+
+### Homework Task:
+
+1.a) Import the proteomics dataset as per the session.
+  b) Clean and preprocess the data according to the session guidelines, but this time change the PG.Q.Value cut-off to 0.05.
+  c) Save the final filtered list of protein groups with q values of < 0.01 and < 0.05 after filtering (name these 'proteins_.01' and 'proteins_.05').
+  d) Enter the number of protein features excluded after filtering at PG.Q.Value q < 0.01 and identities of the 5 proteins with the highest PG.Q.value in the q < 0.05 list.
+  e) Enter the identities of the 5 proteins with the lowest PG.Q.Value filtered at q < 0.01.
+2. Use https://bioinfogp.cnb.csic.es/tools/venny/ to create a Venn diagram of proteins included at 0.01 vs 0.05 PG.Q.Value, then save and upload the plot.
+3. Using EnrichR, select the 'Jensen_COMPARTMENTS' library and plot the top 10 enriched terms for both the q < 0.01 and q < 0.05 lists. Save and upload the plots.
