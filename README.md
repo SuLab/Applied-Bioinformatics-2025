@@ -17,4 +17,4 @@ From https://cran.r-project.org/bin/windows/Rtools/rtools44/rtools.html, click "
 ### 2025-01-07
 * [Overall class intro](https://docs.google.com/presentation/d/1DFdVBRlitwfMhO4pZMOLntDAMrm32WAS/edit?usp=sharing&ouid=101769683166653841618&rtpof=true&sd=true)
 * [Introduction to Proteomics; Importing proteomics data into R](https://docs.google.com/presentation/d/1AzBJR_JMnycM37_xtJLqZi4IJxPEpsUZ/edit?usp=sharing&ouid=117620351523798089230&rtpof=true&sd=true)
-* [Recording](https://www.dropbox.com/scl/fi/0qyzotdw9vrwjvj8hiash/AppliedBioinformaticsandComputationalBiology_2025-01-07.mp4?rlkey=swkw5k6x7semrhz3tv3yks3j5&st=x2kupuhx&dl=0)
+* [Course Recordings](https://www.dropbox.com/scl/fo/ahddd1ci362ppzm8pcyet/AGp4X15MGMhK0RkTlpR_okc?rlkey=6fpej2sf0so8ppo4lqu5yg73z&st=zymytfcp&dl=0)
