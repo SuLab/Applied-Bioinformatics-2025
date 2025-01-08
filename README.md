@@ -11,3 +11,10 @@ From https://cran.r-project.org/bin/windows/Rtools/rtools44/rtools.html, click "
 ### Install/restore everything else
 
 `renv::restore()`
+
+## Course materials
+
+### 2025-01-07
+* [Overall class intro](https://docs.google.com/presentation/d/1DFdVBRlitwfMhO4pZMOLntDAMrm32WAS/edit?usp=sharing&ouid=101769683166653841618&rtpof=true&sd=true)
+* [Introduction to Proteomics; Importing proteomics data into R](https://docs.google.com/presentation/d/1AzBJR_JMnycM37_xtJLqZi4IJxPEpsUZ/edit?usp=sharing&ouid=117620351523798089230&rtpof=true&sd=true)
+* Recording
