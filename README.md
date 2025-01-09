@@ -19,7 +19,7 @@ install camprotR
 * `remotes::install_github("CambridgeCentreForProteomics/camprotR", dependencies = TRUE)`
 
 install diann
-* Must first install g++ (compiler) from https://jmeubank.github.io/tdm-gcc/download/ -- choose the 64+32-bit MinGW-w64 edition version, then restart
+* (Windows only) install g++ (compiler) from https://jmeubank.github.io/tdm-gcc/download/ -- choose the 64+32-bit MinGW-w64 edition version, then restart
 * `remotes::install_github("vdemichev/diann-rpackage", dependencies = TRUE)`
 
 for all other packages, you should be able to use `install.packages` as normal.
