@@ -12,6 +12,19 @@ From https://cran.r-project.org/bin/windows/Rtools/rtools44/rtools.html, click "
 
 `renv::restore()`
 
+If you hit issues using renv, then do the following steps instead
+
+install camprotR
+* `renv::install("remotes")`
+* `remotes::install_github("CambridgeCentreForProteomics/camprotR", dependencies = TRUE)`
+
+install diann
+* Must first install g++ (compiler) from https://jmeubank.github.io/tdm-gcc/download/ -- choose the 64+32-bit MinGW-w64 edition version, then restart
+* `remotes::install_github("vdemichev/diann-rpackage", dependencies = TRUE)`
+
+for all other packages, you should be able to use `install.packages` as normal.
+
+
 ## Course materials
 
 ### 2025-01-07
