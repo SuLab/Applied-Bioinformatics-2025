@@ -68,10 +68,10 @@
     },
     "BH": {
       "Package": "BH",
-      "Version": "1.84.0-0",
+      "Version": "1.87.0-1",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "a8235afbcd6316e6e91433ea47661013"
+      "Hash": "468d9a03ba57f22ebde50060fd13ba9f"
     },
     "BiasedUrn": {
       "Package": "BiasedUrn",
@@ -210,7 +210,7 @@
         "stats",
         "utils"
       ],
-      "Hash": "0f10c15e1017bde87734c980b27dea1f"
+      "Hash": "0b723193ff7df55bae3b547d58329026"
     },
     "DBI": {
       "Package": "DBI",
@@ -883,7 +883,7 @@
     },
     "XML": {
       "Package": "XML",
-      "Version": "3.99-0.17",
+      "Version": "3.99-0.18",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -891,7 +891,7 @@
         "methods",
         "utils"
       ],
-      "Hash": "bc2a8a1139d8d4bd9c46086708945124"
+      "Hash": "4a5eca1070ecfe97e68727ed4b9a89fa"
     },
     "XVector": {
       "Package": "XVector",
@@ -984,68 +984,6 @@
         "R"
       ],
       "Hash": "543776ae6848fde2f48ff3816d0628bc"
-    },
-    "bio3d": {
-      "Package": "bio3d",
-      "Version": "2.4-5",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "Rcpp",
-        "grDevices",
-        "graphics",
-        "grid",
-        "parallel",
-        "stats",
-        "utils"
-      ],
-      "Hash": "e51cfbb24cd20aee2600d6d5c4ae3a5b"
-    },
-    "bio3d.cna": {
-      "Package": "bio3d.cna",
-      "Version": "1.0-0.9000",
-      "Source": "Bitbucket",
-      "RemoteType": "bitbucket",
-      "RemoteHost": "api.bitbucket.org/2.0",
-      "RemoteRepo": "bio3d-cna",
-      "RemoteUsername": "Grantlab",
-      "RemoteSha": "f2d975eb2d65c1b9cc96b273c6e08aedc17712f2",
-      "Requirements": [
-        "R",
-        "bio3d.core",
-        "grDevices",
-        "graphics",
-        "igraph",
-        "parallel",
-        "stats",
-        "utils"
-      ],
-      "Hash": "36ad0931aa4292a3b0222afefd8a1f34"
-    },
-    "bio3d.core": {
-      "Package": "bio3d.core",
-      "Version": "2.5-0.9000",
-      "Source": "Bitbucket",
-      "RemoteType": "bitbucket",
-      "RemoteHost": "api.bitbucket.org/2.0",
-      "RemoteRepo": "bio3d",
-      "RemoteUsername": "Grantlab",
-      "RemoteRef": "core",
-      "RemoteSha": "144f93357a244f4013af042d214fda640daa48e2",
-      "RemoteSubdir": "bio3d-core",
-      "Requirements": [
-        "R",
-        "Rcpp",
-        "grDevices",
-        "graphics",
-        "grid",
-        "lattice",
-        "parallel",
-        "stats",
-        "utils"
-      ],
-      "Hash": "78f2597862f16ed071c79034c7678130"
     },
     "biomaRt": {
       "Package": "biomaRt",
@@ -1358,11 +1296,10 @@
       "Source": "GitHub",
       "RemoteType": "github",
       "RemoteHost": "api.github.com",
-      "RemoteUsername": "moodymudskipper",
       "RemoteRepo": "cutr",
-      "RemoteRef": "master",
+      "RemoteUsername": "moodymudskipper",
       "RemoteSha": "7b8e9cdcd14ce3f17604fa6c36a02cf7e2805e32",
-      "Hash": "5e7ffeadacfef8a7e8a7d337e4701a80"
+      "Hash": "f8c4e31e3b827aa1ec7914eadb4a6bd9"
     },
     "data.table": {
       "Package": "data.table",
@@ -1886,7 +1823,7 @@
     },
     "igraph": {
       "Package": "igraph",
-      "Version": "2.1.2",
+      "Version": "2.1.3",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -1905,7 +1842,7 @@
         "utils",
         "vctrs"
       ],
-      "Hash": "9a93b743b2461ba06ba3b5df12011145"
+      "Hash": "337fa0da3fe0506d235cde01d751b4c3"
     },
     "impute": {
       "Package": "impute",
@@ -2119,13 +2056,13 @@
     },
     "matrixStats": {
       "Package": "matrixStats",
-      "Version": "1.4.1",
+      "Version": "1.5.0",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
         "R"
       ],
-      "Hash": "8885ffb1f46e820dede6b2ca9442abca"
+      "Hash": "9fd316b52ac8c24fef4c67fdd646e965"
     },
     "memoise": {
       "Package": "memoise",
@@ -2284,13 +2221,13 @@
     },
     "openssl": {
       "Package": "openssl",
-      "Version": "2.2.2",
+      "Version": "2.3.0",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
         "askpass"
       ],
-      "Hash": "d413e0fef796c9401a4419485f709ca1"
+      "Hash": "5bfe2927efa9f87766ca9605301ea48f"
     },
     "pcaMethods": {
       "Package": "pcaMethods",
@@ -2308,12 +2245,11 @@
     },
     "pillar": {
       "Package": "pillar",
-      "Version": "1.9.0",
+      "Version": "1.10.1",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
         "cli",
-        "fansi",
         "glue",
         "lifecycle",
         "rlang",
@@ -2321,7 +2257,7 @@
         "utils",
         "vctrs"
       ],
-      "Hash": "15da5a8412f317beeee6175fbc76f4bb"
+      "Hash": "8b16b6097daef84cd3c40a6a7c5c9d86"
     },
     "pkgconfig": {
       "Package": "pkgconfig",
@@ -2537,20 +2473,6 @@
       "Repository": "CRAN",
       "Hash": "cbff1b666c6fa6d21202f07e2318d4f1"
     },
-    "remotes": {
-      "Package": "remotes",
-      "Version": "2.5.0",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "methods",
-        "stats",
-        "tools",
-        "utils"
-      ],
-      "Hash": "3ee025083e66f18db6cf27b56e23e141"
-    },
     "renv": {
       "Package": "renv",
       "Version": "1.0.11",
@@ -2610,7 +2532,7 @@
         "stats",
         "utils"
       ],
-      "Hash": "e9e5def6581dfba38be1eb14771777b1"
+      "Hash": "38bc056024661bc62183e7e20f4665bb"
     },
     "rjson": {
       "Package": "rjson",
@@ -3006,7 +2928,7 @@
     },
     "xfun": {
       "Package": "xfun",
-      "Version": "0.49",
+      "Version": "0.50",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -3015,7 +2937,7 @@
         "stats",
         "tools"
       ],
-      "Hash": "8687398773806cfff9401a2feca96298"
+      "Hash": "44ab88837d3f8dfc66a837299b887fa6"
     },
     "xml2": {
       "Package": "xml2",
