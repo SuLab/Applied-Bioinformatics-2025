@@ -34,6 +34,12 @@ for all other packages, you should be able to use `install.packages` as normal.
 * [Overall class intro](https://docs.google.com/presentation/d/1DFdVBRlitwfMhO4pZMOLntDAMrm32WAS/edit?usp=sharing&ouid=101769683166653841618&rtpof=true&sd=true)
 * [Introduction to Proteomics; Importing proteomics data into R](https://docs.google.com/presentation/d/1AzBJR_JMnycM37_xtJLqZi4IJxPEpsUZ/edit?usp=sharing&ouid=117620351523798089230&rtpof=true&sd=true)
 
+
+### 2025-01-09
+* [Data manipulation; Dplyr and EnrichR](https://docs.google.com/presentation/d/1EXqxfV6nAepYD6nMXxSyAppymuyJvTvv/edit?usp=sharing&ouid=117620351523798089230&rtpof=true&sd=true)
+
+
 ### 2025-01-14
 * [How to ask for help](https://docs.google.com/presentation/d/1X_A7HeIQ0SYK1iWilKVG3uIArGInNmoN/edit?usp=sharing&ouid=101769683166653841618&rtpof=true&sd=true)
 * [Bioconductor](https://docs.google.com/presentation/d/1bd-1Mm4HrUiA7W3KixEDrmEcKA717EFN-oWmOEuySWw/edit?usp=sharing)
+* [Data visualization with mixOmics](https://docs.google.com/presentation/d/14J1nxm7Yu7deGskz63wlcH9qgU7iAsJS/edit?usp=sharing&ouid=117620351523798089230&rtpof=true&sd=true)
