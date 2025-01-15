@@ -28,12 +28,12 @@ Y <- breast.TCGA$data.train$subtype
 
 # PCA plot
 pca_result <- pca(X)
-plotIndiv(pca_result, group = breast.TCGA$data.train$subtype, 
+plotIndiv(pca_result, group = Y, 
           legend = TRUE, title = "PCA of protein expression")
 
 # PLS-DA plot
-plsda_result <- plsda(X, Y)
-plotIndiv(plsda_result, group = breast.TCGA$data.train$subtype, 
+plsda_result <- plsda(X, Y, ncomp = 10)
+plotIndiv(plsda_result, group = Y, 
           legend = TRUE, title = "PLS-DA of protein expression")
 ```
 
@@ -41,42 +41,70 @@ plotIndiv(plsda_result, group = breast.TCGA$data.train$subtype,
 Here you can see the difference between the 2 types of plots; however, PLS-DA plots can be optimized for variable/feature selection. This is not a feature of PCA plots.
 The below steps will allow you to optimize the PLS-DA plot according to the components that contribute the most to distinguishing between the control and treatment groups.
 
-We can visually inspect the component loadings to determine the optimal number of components to include in downstream analyses.
+We can inspect the component loadings to determine the optimal number of components to include in downstream analyses.
 
 ```{r}
+# extract the variables used to construct the first latent component
+selectVar(splsda_result, comp = 1)$name 
+# depict weight assigned to each of these variables
 
-# Extract the protein abundance data
-X <- breast.TCGA$data.train$protein
-Y <- breast.TCGA$data.train$subtype
+plotLoadings(splsda_result, method = 'mean', contrib = 'max')
+# plot the samples projected onto the first two components of the PLS-DA subspace
+plotIndiv(splsda_result, comp = 1:2, 
+          group = Y, ind.names = FALSE,  # colour points by class
+          ellipse = TRUE, # include 95% confidence ellipse for each class
+          legend = TRUE, title = '(a) PLSDA with confidence ellipses')
 
-#Perform PCA on protein data
-pca.protein <- pca(X, ncomp = 10, center = TRUE, scale = TRUE)
+# use the max.dist measure to form decision boundaries between classes based on PLS-DA data
+background = background.predict(splsda_result, comp.predicted=2, dist = "max.dist")
 
-#Plot results
-plot(pca.protein)
+# plot the samples projected onto the first two components of the PLS-DA subspace
+plotIndiv(splsda_result, comp = 1:2,
+          group = Y, ind.names = FALSE, # colour points by class
+          background = background, # include prediction background for each class
+          legend = TRUE, title = " (b) PLSDA with prediction background")
 
-#Plot PCA using plotIndiv
-plotIndiv(pca.protein, ncomp = 2, ind.names = FALSE,
-          group = Y, style = "ggplot2",
-          ellipse = TRUE, size.xlabel = rel(2), size.ylabel = rel(2), cex = 4,
-          legend = TRUE, title = 'PCA on breast.TCGA protein data')
+# undergo performance evaluation in order to tune the number of components to use
+perf.splsda <- perf(splsda_result, validation = "Mfold", 
+                          folds = 5, nrepeat = 10, # use repeated cross-validation
+                          progressBar = FALSE, auc = TRUE) # include AUC values
 
-# Select the optimal components for clustering
-pca_result <- pca(X, ncomp = 2)
+# plot the outcome of performance evaluation across all ten components
+plot(perf.splsda, col = color.mixo(5:7), sd = TRUE,
+     legend.position = "horizontal")
 
-# Get the loadings for the heatmap
-loadings <- pca_result$loadings$X
-plot(loadings)
+perf.splsda$choice.ncomp # what is the optimal value of components according to perf()
 
-# Create a heatmap
-heatmap.mat <- as.matrix(loadings)
-heatmap.mat[is.na(heatmap.mat)] <- 0 # Replace NAs with zeros for visualization
+# grid of possible keepX values that will be tested for each component
+list.keepX <- c(1:10,  seq(20, 300, 10))
 
-# Plot the heatmap
-heatmap(heatmap.mat, Rowv = NA, Colv = NA, col = colorRampPalette(c("blue", "white", "red"))(100),
-        scale = "none", xlab = "Features", ylab = "Principal Components",
-        main = "Heatmap of PCA Loadings",
-        cexRow = 0.5, cexCol = 1)
+# undergo the tuning process to determine the optimal number of variables
+tune.splsda <- tune.splsda(X, Y, ncomp = 4, # calculate for first 4 components
+                                 validation = 'Mfold',
+                                 folds = 5, nrepeat = 10, # use repeated cross-validation
+                                 dist = 'centroids.dist', # use max.dist measure
+                                 measure = "BER", # use balanced error rate of dist measure
+                                 test.keepX = list.keepX,
+                                 cpus = 2) # allow for paralleliation to decrease runtime
+
+plot(tune.splsda, col = color.jet(4)) # plot output of variable number tuning
+
+tune.splsda$choice.ncomp$ncomp # what is the optimal value of components according to tune.splsda()
+
+tune.splsda$choice.keepX # what are the optimal values of variables according to tune.splsda()
+
+optimal.ncomp <- tune.splsda$choice.ncomp$ncomp
+optimal.keepX <- tune.splsda$choice.keepX[1:optimal.ncomp]
+
+# form final model with optimised values for component and variable count
+final.splsda <- splsda(X, Y, 
+                       ncomp = optimal.ncomp, 
+                       keepX = optimal.keepX)
+
+plotIndiv(final.splsda, comp = c(1,2), # plot samples from final model
+          group = Y, ind.names = FALSE, # colour by class label
+          ellipse = TRUE, legend = TRUE, # include 95% confidence ellipse
+          title = ' (a) sPLS-DA on breast.TCGA, comp 1 & 2')
 
 ```
 
