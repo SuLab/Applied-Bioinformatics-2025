@@ -108,6 +108,45 @@ plotIndiv(final.splsda, comp = c(1,2), # plot samples from final model
 
 ```
 
+If using PCA, you are still able to extract the variable names and loadings, and plot this in a heatmap:
+
+```{r}
+
+# Extract the protein abundance data
+X <- breast.TCGA$data.train$protein
+Y <- breast.TCGA$data.train$subtype
+
+#Perform PCA on protein data
+pca.protein <- pca(X, ncomp = 10, center = TRUE, scale = TRUE)
+
+#Plot results
+plot(pca.protein)
+
+#Plot PCA using plotIndiv
+plotIndiv(pca.protein, ncomp = 2, ind.names = FALSE,
+          group = Y, style = "ggplot2",
+          ellipse = TRUE, size.xlabel = rel(2), size.ylabel = rel(2), cex = 4,
+          legend = TRUE, title = 'PCA on breast.TCGA protein data')
+
+# Select the optimal components for clustering
+pca_result <- pca(X, ncomp = 2)
+
+# Get the loadings for the heatmap
+loadings <- pca_result$loadings$X
+plot(loadings)
+
+# Create a heatmap
+heatmap.mat <- as.matrix(loadings)
+heatmap.mat[is.na(heatmap.mat)] <- 0 # Replace NAs with zeros for visualization
+
+# Plot the heatmap
+heatmap(heatmap.mat, Rowv = NA, Colv = NA, col = colorRampPalette(c("blue", "white", "red"))(100),
+        scale = "none", xlab = "Features", ylab = "Principal Components",
+        main = "Heatmap of PCA Loadings",
+        cexRow = 0.5, cexCol = 1)
+
+```
+
 Principal Component Analysis (PCA) Explanation:
 
 A Principal Component Analysis (PCA) plot is like a map for your data. It takes complex data and reduces its dimensions, making it easier to see patterns and relationships.
