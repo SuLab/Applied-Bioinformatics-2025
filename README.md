@@ -43,3 +43,6 @@ for all other packages, you should be able to use `install.packages` as normal.
 * [How to ask for help](https://docs.google.com/presentation/d/1X_A7HeIQ0SYK1iWilKVG3uIArGInNmoN/edit?usp=sharing&ouid=101769683166653841618&rtpof=true&sd=true)
 * [Bioconductor](https://docs.google.com/presentation/d/1bd-1Mm4HrUiA7W3KixEDrmEcKA717EFN-oWmOEuySWw/edit?usp=sharing)
 * [Data visualization with mixOmics](https://docs.google.com/presentation/d/14J1nxm7Yu7deGskz63wlcH9qgU7iAsJS/edit?usp=sharing&ouid=117620351523798089230&rtpof=true&sd=true)
+
+### 2025-01-16
+* [Formatting Data for mixOmics](https://docs.google.com/presentation/d/1ZazO1xg4PBTX7BPGp2RnEppZ-6nlHPGN/edit?usp=sharing&ouid=101769683166653841618&rtpof=true&sd=true)
