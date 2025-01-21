@@ -46,3 +46,7 @@ for all other packages, you should be able to use `install.packages` as normal.
 
 ### 2025-01-16
 * [Formatting Data for mixOmics](https://docs.google.com/presentation/d/1ZazO1xg4PBTX7BPGp2RnEppZ-6nlHPGN/edit?usp=sharing&ouid=101769683166653841618&rtpof=true&sd=true)
+
+### 2025-01-21
+* [Introduction to MSstats](https://docs.google.com/presentation/d/14hCFWaeSLAZkacpwWwO_STvFpNdBH91g/edit)
+* [Git and Github](https://docs.google.com/presentation/d/1xAKv2cfepvKv57Ojcxb0Tvxrjee1skJB0wTP00W3grg/edit)
