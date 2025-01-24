@@ -32,9 +32,9 @@ plotIndiv(pca_result, group = Y,
           legend = TRUE, title = "PCA of protein expression")
 
 # PLS-DA plot
-plsda_result <- plsda(X, Y, ncomp = 10)
-plotIndiv(plsda_result, group = Y, 
-          legend = TRUE, title = "PLS-DA of protein expression")
+splsda_result <- splsda(X, Y, ncomp = 10)
+plotIndiv(splsda_result, group = Y, 
+          legend = TRUE, title = "sPLS-DA of protein expression")
 ```
 
 
@@ -62,7 +62,7 @@ background = background.predict(splsda_result, comp.predicted=2, dist = "max.dis
 plotIndiv(splsda_result, comp = 1:2,
           group = Y, ind.names = FALSE, # colour points by class
           background = background, # include prediction background for each class
-          legend = TRUE, title = " (b) PLSDA with prediction background")
+          legend = TRUE, title = " (b) sPLSDA with prediction background")
 
 # undergo performance evaluation in order to tune the number of components to use
 perf.splsda <- perf(splsda_result, validation = "Mfold", 
@@ -177,7 +177,7 @@ Comparison with PCA:
 
 PCA is great for uncovering the overall structure and patterns in your data without prior group information.
 
-PLS-DA is better for distinguishing between specific groups and highlighting differences based on predefined classes.
+(s)PLS-DA is better for distinguishing between specific groups and highlighting differences based on predefined classes.
 
 ### Homework Task:
 Recreate the heatmap from this session at home.
