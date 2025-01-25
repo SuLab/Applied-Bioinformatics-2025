@@ -50,3 +50,6 @@ for all other packages, you should be able to use `install.packages` as normal.
 ### 2025-01-21
 * [Introduction to MSstats](https://docs.google.com/presentation/d/14hCFWaeSLAZkacpwWwO_STvFpNdBH91g/edit)
 * [Git and Github](https://docs.google.com/presentation/d/1xAKv2cfepvKv57Ojcxb0Tvxrjee1skJB0wTP00W3grg/edit)
+
+### 2025-01-23
+* [Differential Protein Abundance and Volcano Plots | Capstone Walkthrough](https://docs.google.com/presentation/d/1xuFXC3QBQiVE6qRZzaKchKLOmufJBWrY/edit?usp=drive_link&ouid=117620351523798089230&rtpof=true&sd=true)
