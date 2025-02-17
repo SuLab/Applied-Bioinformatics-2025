@@ -1,0 +1,271 @@
+---
+title: "Week1_notebook_key"
+output: html_document
+---
+
+# In class exercise - camprotR
+
+```{r In class exercise - camprotR, warning=FALSE, include=FALSE}
+# In class exercise - cRAP append
+library(Biostrings)
+library(camprotR)
+library(httr)
+
+# create a temp file
+ccp_tmp <- tempfile(fileext = ".fasta")
+download_ccp_crap(ccp_tmp, is_crap = TRUE, verbose = TRUE, overwrite = TRUE) #downloads the Cambridge Centre for Proteomics cRAP file (CCP cRAP)
+
+# read temp file
+ccp_crap <- Biostrings::readAAStringSet(ccp_tmp)
+ccp_crap
+
+# Final cRAP number: 127
+
+head(names(ccp_crap)) #displays first few rows of .fasta entries
+
+new_tmp <- tempfile(fileext = ".fasta")
+make_fasta(accessions = c("P02769", "P35747", "P08835", "P00761"), # This line edited with additional protein accessions
+                file = new_tmp,
+                is_crap = FALSE)
+
+tail(names(ccp_crap)) #displays the last few rows of the CCP cRAP .fasta entries
+
+```
+
+```{r CamprotR: output}
+#Add the accessions stored as 'new_tmp' to the ccp_tmp file. 
+append_fasta(
+  file1 = new_tmp,
+  file2 = ccp_tmp,
+  is_crap = TRUE,
+  crap_start = 128) #<-- edit this line to append the sequences to the end of the .fasta, continuing in numerical order.
+
+#view ccp_tmp file to confirm the entries have been added correctly.
+Biostrings::readAAStringSet(ccp_tmp)
+```
+# In class extension exercise - EnrichR
+Follow the example from the vignette below using the extracted gene names from the HM and CM dataset. The head of the code is below, now it's up to you to fill in the rest!
+
+```
+library(enrichR)
+
+websiteLive <- getOption("enrichR.live")
+if (websiteLive) {
+    listEnrichrSites()
+    setEnrichrSite("Enrichr") # Human genes   
+}
+
+if (websiteLive) dbs <- listEnrichrDbs()
+
+dbs <- c("GO_Molecular_Function_2015", "GO_Cellular_Component_2015", "GO_Biological_Process_2015")
+
+####Insert lines of code here/below#####
+
+if (websiteLive) {
+    enriched <- enrichr(clean_data$Genes, dbs) #Selects column in dataframe containing gene names
+}
+
+if (websiteLive) enriched[["GO_Biological_Process_2015"]]
+
+if (websiteLive) {
+    plotEnrich(enriched[[3]], showTerms = 20, numChar = 40, y = "Count", orderBy = "P.value")
+}
+
+```
+
+
+# Homework task
+
+1.a) Import the proteomics dataset as per the session.
+  b) Clean and pre-process the data according to the session guidelines, but this time change the PG.Q.Value cut-off to 0.05.
+  
+  This is mostly copy-paste from the session, but students are required to duplicate the code, rename some of the dataframes to accommodate the duplicates, and change the PG.Q.Value to 0.05 (line 100).
+
+```{r Homework task: 1a-b}
+# Load necessary libraries
+library(readr)
+library(dplyr)
+library(readxl)
+library(limma)
+
+# Importing data
+raw_data <- read_csv("data/HM_CM_DIANN_report.csv", show_col_types = FALSE)
+
+# Annotate file
+annotations <- "data/annotations.xlsx"
+df_2_ann = read_xlsx(annotations, sheet = "annotations")
+df_2_ann <- df_2_ann[,1:4]
+
+# Remove outliers
+# EV runs selected/other runs removed--
+df_2_merged<-merge(raw_data, df_2_ann, by='Run')
+raw_data2 <-subset(df_2_merged, df_2_merged$Outlier!="TRUE")
+
+# Merge results with annotations file by name of Run
+df_2_merged<-merge(raw_data, df_2_ann, by='Run')
+df_2_removed<-df_2_merged
+# Remove outliers
+df_2_removed<-subset(df_2_removed, df_2_removed$Outlier!="TRUE") 
+raw_data2 <- df_2_removed
+# Change header of column 22 - for compatibility with MSstats (explored later on in the module)
+colnames(raw_data2)[22] <- "Lib.PG.Q.Value"
+
+# Selecting specific columns
+selected_data <- raw_data2 %>% select(Run, Protein.Names, Genes, PG.MaxLFQ, PG.Q.Value) #Hint - change this line of code to include the column in the raw_data2 dataframe that contains the gene names = Genes
+
+# Filtering rows to include variables with Protein Group Q Value < 0.01 (1% FDR filtering)
+filtered_data <- selected_data %>% filter(PG.Q.Value < 0.01)
+
+# Creating a new column for log-transformed expression values
+mutated_data <- filtered_data %>% mutate(Log2PG.MaxLFQ = log2(PG.MaxLFQ + 1))
+
+# Handling missing values
+clean_data <- mutated_data %>% na.omit() #na.omit removes any variable/row that has a single missing value, denoted as 'NA'
+
+
+# Change to PG q value 0.05
+
+# Filtering rows to include variables with Protein Group Q Value < 0.05 (1% FDR filtering)
+filtered_data2 <- selected_data %>% filter(PG.Q.Value < 0.05) # change q value to 0.05
+
+# Creating a new column for log-transformed expression values
+mutated_data2 <- filtered_data2 %>% mutate(Log2PG.MaxLFQ = log2(PG.MaxLFQ + 1))
+
+# Handling missing values
+clean_data2 <- mutated_data2 %>% na.omit() #na.omit removes any variable/row that has a single missing value, denoted as 'NA'
+
+```
+
+1.c) Save the final filtered list of proteins with q values of < 0.01 and < 0.05 after filtering (name these 'proteins_.01' and 'proteins_.05').
+
+```{r Homework task: 1c}
+write.csv(clean_data, file = "proteins_.01.csv")
+write.csv(clean_data2, file = "proteins_.05.csv")
+          
+```
+
+d) Enter the number of protein features excluded after filtering at PG.Q.Value q < 0.01 and identities of the 5 proteins with the highest PG.Q.value in the q < 0.05 list.
+
+```{r Homework task: 1d}
+# values visible in R environment tab
+print(paste("Features excluded:", dim(clean_data2)[1]-dim(clean_data)[1])) # answer = 1302
+sorted_proteins.05 <- sort_by.data.frame(clean_data2, clean_data2$PG.Q.Value, decreasing = TRUE)
+head(sorted_proteins.05$Protein.Names, n = 5)
+
+```
+
+e) Enter the identities of the 5 proteins with the lowest PG.Q.Value filtered at q < 0.01.
+
+```{r Homework task: 1e}
+# Multiple ways of performing this. From within R, the below code works [and there are many other ways of getting the same result with other functions], or else clicking on the dataframe in the R environment and sorting by clicking on the PG.Q.Value header.
+# Students can also access the .csv file externally and sort/retrieve the names that way.
+
+sorted_proteins.01 <- sort_by.data.frame(clean_data, clean_data$PG.Q.Value, decreasing = FALSE)
+head(sorted_proteins.01$Protein.Names, n = 5)
+
+```
+
+2. Use https://bioinfogp.cnb.csic.es/tools/venny/ to create a Venn diagram of proteins included at 0.01 vs 0.05 PG.Q.Value, then save and upload the plot.
+
+```{r Homework task: 2 - Venny}
+# Extract protein names from .csv file and enter into Venny
+
+Proteins.01 <- gsub('_HUMAN','', sorted_proteins.01$Protein.Names, ignore.case = FALSE, perl = FALSE)
+Proteins.01_final <- as.data.frame(gsub('_BOVIN', '', Proteins.01,ignore.case = FALSE, perl = FALSE))
+
+Proteins.05 <- gsub('_HUMAN','', sorted_proteins.05$Protein.Names, ignore.case = FALSE, perl = FALSE)
+Proteins.05_final <- as.data.frame(gsub('_BOVIN', '', Proteins.05,ignore.case = FALSE, perl = FALSE))
+
+colnames(Proteins.01_final) <- c('Proteins.01')
+colnames(Proteins.05_final) <- c('Proteins.05')
+
+write.csv(Proteins.01_final, file = "Proteins.01_final.csv")
+write.csv(Proteins.05_final, file = "Proteins.05_final.csv")
+
+library(VennDiagram)
+library(grid)
+library(ggplot2)
+
+# Create the Venn diagram
+venn.plot <- venn.diagram(
+  x = list(Proteins01 = Proteins.01_final$Proteins.01, Proteins05 = Proteins.05_final$Proteins.05),
+  category.names = c("q < 0.01", "q < 0.05"),
+  filename = "Protein_names.Venn.jpeg",
+  output = FALSE,
+  imagetype = "png",
+  height = 3000,
+  width = 3000,
+  resolution = 300,
+  compression = "lzw",
+  lwd = 2,
+  col = c("Red", "Blue"),
+  fill = c("red", "blue"), 0.3,
+  cex = 2,
+  fontfamily = "sans",
+  cat.cex = 2,
+  cat.fontfamily = "sans"
+)
+
+grid.draw(venn.plot)
+dev.off()
+
+```
+
+3. Using EnrichR, select the 'Jensen_COMPARTMENTS' library and plot the top 10 enriched terms for both the q < 0.01 and q < 0.05 lists. Save and upload the plots (file names = enrichr_.01 and enrichr_.05).
+
+```{r Homework task: 3 - EnrichR}
+library(enrichR)
+
+websiteLive <- getOption("enrichR.live")
+if (websiteLive) {
+    listEnrichrSites()
+    setEnrichrSite("Enrichr") # Human genes   
+}
+
+if (websiteLive) dbs <- listEnrichrDbs()
+
+# Select Jensen_COMPARTMENTS dbs and read in Gene names from dataframes
+
+dbs <- c("Jensen_COMPARTMENTS") #name of dbs
+if (websiteLive) {
+    enriched <- enrichr(sorted_proteins.01$Genes, dbs) #Selects column in sorted_proteins.01 dataframe containing gene names
+}
+
+```
+
+```{r include=FALSE}
+table_results_01 <- if (websiteLive) enriched[["Jensen_COMPARTMENTS"]] #view tabular results
+
+# Create plot and save to file
+if (websiteLive) {
+    enriched <- enrichr(sorted_proteins.05$Genes, dbs) #Selects column in dataframe containing gene names
+}
+
+# Create plot of top 10 enriched terms
+if (websiteLive) {
+    plotEnrich(enriched[[1]], showTerms = 10, #edited to show 10 terms
+               numChar = 40, y = "Count", orderBy = "P.value") 
+}
+
+savePlot(filename = "enrichr.01",
+         type = c("jpeg"),
+         device = dev.cur(),
+         restoreConsole = TRUE)
+
+
+# Repeat for second dataframe
+if (websiteLive) {
+    enriched <- enrichr(sorted_proteins.05$Genes, dbs) #Selects column in dataframe containing gene names
+}
+
+if (websiteLive) {
+    plotEnrich(enriched[[1]], showTerms = 10, #edited to show 10 terms
+               numChar = 40, y = "Count", orderBy = "P.value") 
+}
+
+savePlot(filename = "enrichr.05",
+         type = c("jpeg"),
+         device = dev.cur(),
+         restoreConsole = TRUE)
+```
+
