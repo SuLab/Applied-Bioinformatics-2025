@@ -1,0 +1,257 @@
+---
+title: "Week2_notebook_key"
+output: html_notebook
+---
+
+### Homework Task: Heatmap and variable name extractions
+
+```{r Homework Task Week 2 Session 1}
+#Copy and paste code from the session to obtain variable names
+# Extract the protein abundance data
+library(mixOmics)
+data("breast.TCGA")
+X <- breast.TCGA$data.train$protein
+Y <- breast.TCGA$data.train$subtype
+
+#Perform PCA on protein data
+pca.protein <- pca(X, ncomp = 10, center = TRUE, scale = TRUE)
+
+#Plot results
+plot(pca.protein)
+
+# Select the optimal components for clustering
+pca_result <- pca(X, ncomp = 2)
+
+# Get the loadings for the heatmap
+loadings <- pca_result$loadings$X
+plot(loadings)
+
+# Create a heatmap
+heatmap.mat <- as.matrix(loadings)
+heatmap.mat[is.na(heatmap.mat)] <- 0 # Replace NAs with zeros for visualization
+
+# Plot the heatmap and edit to create object
+heatmap(heatmap.mat, Rowv = NA, Colv = NA, col = colorRampPalette(c("blue", "white", "red"))(100),
+        scale = "none", xlab = "Features", ylab = "Principal Components",
+        main = "Heatmap of PCA Loadings",
+        cexRow = 0.5, cexCol = 1)
+
+# Right click on image in R and save as "Heatmap" (or similar)
+
+#Extract variable names
+Comp1 <- as.data.frame(pca_result$names$X)
+write.csv(Comp1, file = "Comp1 and 2_proteins.csv")
+
+```
+
+### Week 2 Session 2 Exercise
+Using the previous session as a guide, try creating a PCA plot of the data.
+
+```{r Week 2 Session 2 Exercise}
+# Students can copy and paste the lines of code from the previous session
+# Students need exclude the PBQC group from the annotations and apply it
+# Create a nested list with the cleaned/log transformed data (X) and species as a factor (Y).
+
+# Load necessary libraries
+library(readr)
+library(dplyr)
+library(readxl)
+library(mixOmics)
+library(diann)
+library(limma)
+
+# Importing data as per Session 1
+raw_data <- read_csv("data/HM_CM_DIANN_report.csv", show_col_types = FALSE)
+raw_data_diann <- diann_load("data/HM_CM_DIANN_report.csv")
+
+# Annotate file
+annotations <- "data/annotations.xlsx"
+df_2_ann = read_xlsx(annotations, sheet = "annotations")
+
+# Merge results with annotations file by name of Run
+df_2_merged<-merge(raw_data, df_2_ann, by='Run')
+df_2_removed<-df_2_merged
+#Remove outliers
+df_2_removed<-subset(df_2_removed, df_2_removed$Outlier!="TRUE") 
+raw_data2 <- df_2_removed
+
+# Filtering rows to include variables with Protein Group Q Value <= 0.01 (1% FDR filtering)
+filtered_data <- raw_data2 %>% filter(PG.Q.Value <= 0.01)
+
+formatted_data <- diann_maxlfq(filtered_data,
+                               sample.header = "Run",
+                               group.header = "Protein.Group",
+                               id.header = "Precursor.Id",
+                               quantity.header = "Precursor.Normalised")
+
+# Handling missing values
+clean_data <- formatted_data %>% na.omit() #na.omit removes any variable/row that has a single missing value, denoted as 'NA'
+log_data <- log2(clean_data + 1)
+#make sure runs appear in alphanumerical order
+sort((colnames(log_data)))
+#rename columns with Condition and BioReplicates
+colnames(log_data) <- c("HM1", "CM1","HM2","CM2","HM3","CM3","HM4")
+
+#alternative
+colnames(log_data) <- df_2_ann$Condition[1:7]
+
+#create boxplot of data before normalization
+pre_norm <- as.data.frame(log_data)
+par(las = 1) # all axis labels horizontal
+boxplot(pre_norm, main = "Boxplot of Cleaned/Log transformed data (no normalization)", horizontal = TRUE)
+
+#apply normalization
+final_data <- normalizeQuantiles(log_data)
+
+#create boxplot of data after normalization
+post_norm <- as.data.frame(final_data)
+par(las = 1) # all axis labels horizontal
+boxplot(post_norm, main = "Boxplot of Normalized data", horizontal = TRUE)
+
+
+library(data.table)
+
+#Solution without PBQC
+group.names <- df_2_ann[!(df_2_ann$Condition %like% "PBQC"),]
+milk_data <- list(species = group.names$Condition,
+            data = t(final_data),
+            protein.name = raw_data$Protein.Names)
+
+#classify X and Y
+X <- milk_data$data
+Y <- milk_data$species
+
+#Perform PCA on protein data
+pca.protein <- pca(X, ncomp = 5, center = TRUE, scale = TRUE)
+
+#Plot results
+plot(pca.protein)
+
+#Plot PCA using plotIndiv
+plotIndiv(pca.protein, ncomp = 2, ind.names = FALSE,
+          group = Y, style = "ggplot2",
+          ellipse = TRUE, size.xlabel = rel(2), size.ylabel = rel(2), cex = 4,
+          legend = TRUE, title = 'PCA on milk EV data')
+
+
+```
+
+### Extra exercise
+In the annotations file, change it so that there are no outliers.
+Now, perform the PCA plot including all three groups (HM, CM and PBQC).
+
+
+```{r}
+#To include the PBQC data, students need to re-annotate the dataframe so that PBQC samples are not Outliers
+#Solution with PBQC
+
+###Option 1
+# Importing data as per Session 1
+raw_data <- read_csv("data/HM_CM_DIANN_report.csv", show_col_types = FALSE)
+raw_data_diann <- diann_load("data/HM_CM_DIANN_report.csv")
+
+# Annotate file
+annotations <- "data/annotations.xlsx"
+df_2_ann = read_xlsx(annotations, sheet = "annotations")
+
+# Merge results with annotations file by name of Run
+df_2_merged<-merge(raw_data, df_2_ann, by='Run')
+#Remove outliers - Can edit this section to leave outliers in place
+#df_2_removed<-subset(df_2_removed, df_2_removed$Outlier!="TRUE") 
+raw_data2 <- df_2_merged
+
+###Option 2 - Use mutate to change "TRUE" to "No"
+# Annotate file
+annotations <- "data/annotations.xlsx"
+df_2_ann = read_xlsx(annotations, sheet = "annotations")
+with.PBQC <- df_2_ann %>% mutate(across(everything(), ~ ifelse(. == "TRUE", "No", .)))
+# Merge results with annotations file by name of Run
+df_2_merged<-merge(raw_data, with.PBQC, by='Run')
+#Remove outliers - Can edit this section to leave outliers in place
+df_2_removed<-subset(df_2_merged, df_2_merged$Outlier!="TRUE") 
+raw_data2 <- df_2_removed
+
+###Option 3 - Manually re-annotate the .xlsx annotations file and change "TRUE" to "No"
+
+##Now copy and paste code from the session
+# Filtering rows to include variables with Protein Group Q Value <= 0.01 (1% FDR filtering)
+filtered_data <- raw_data2 %>% filter(PG.Q.Value <= 0.01)
+
+formatted_data <- diann_maxlfq(filtered_data,
+                               sample.header = "Run",
+                               group.header = "Protein.Group",
+                               id.header = "Precursor.Id",
+                               quantity.header = "Precursor.Normalised")
+
+# Handling missing values
+clean_data <- formatted_data %>% na.omit() #na.omit removes any variable/row that has a single missing value, denoted as 'NA'
+log_data <- log2(clean_data + 1)
+#make sure runs appear in alphanumerical order
+order((colnames(log_data)))
+#rename columns with Condition and BioReplicates
+colnames(log_data) <- c("HM1", "CM1","HM2","CM2","HM3","CM3","HM4", "PBQC1", "PBQC2") #include PBQC headers
+
+#alternative
+colnames(log_data) <- df_2_ann$Condition[1:9] #Select all rows for column headers instead of just HM and CM
+
+#create boxplot of data before normalization
+pre_norm <- as.data.frame(log_data)
+par(las = 1) # all axis labels horizontal
+boxplot(pre_norm, main = "Boxplot of Cleaned/Log transformed data (no normalization)", horizontal = TRUE)
+
+#apply normalization
+final_data <- normalizeQuantiles(log_data)
+
+#create boxplot of data after normalization
+post_norm <- as.data.frame(final_data)
+par(las = 1) # all axis labels horizontal
+boxplot(post_norm, main = "Boxplot of Normalized data", horizontal = TRUE)
+
+#PBQC included in dataset so no need to extract just HM and CM this time
+milk_data <- list(species = df_2_ann$Condition,
+            data = t(final_data),
+            protein.name = raw_data$Protein.Names)
+
+#classify X and Y
+X <- milk_data$data
+Y <- milk_data$species
+
+#Perform PCA on protein data
+pca.protein <- pca(X, ncomp = 5, center = TRUE, scale = TRUE)
+
+#Plot results
+plot(pca.protein)
+
+#Plot PCA using plotIndiv
+plotIndiv(pca.protein, ncomp = 5, ind.names = FALSE,
+          group = Y, style = "ggplot2",
+          ellipse = TRUE, size.xlabel = rel(2), size.ylabel = rel(2), cex = 4,
+          legend = TRUE, title = 'PCA on milk EV and PBQC data')
+
+```
+
+### Homework task:
+1. Work through the SRBCT case study (https://mixomics.org/case-studies/splsda-srbct-case-study/) to familiarize yourself with the sPLS-DA workflow. Even though this is gene-level data, the same workflow can be applied to proteomics data formatted in the same way.
+2. Generate the sample plots from Figures 6, 7 and 9, and provide a brief summary of what the plots show.
+
+#Code provided in the mixOmics tutorial
+Model answers also provided on miXomics page (see below).
+Students are expected to summarize these answers in their own words.
+
+Figure 6:
+Figure 6 shows the sample plots for the first and second components (a) and the first and third components (b). The difference between Figure 6 (a) and (b) is indicative of the fact that different genes discriminate the samples differently. Genes which contributed to the third component separated the RMS and NB classes much better than those which contributed to the second. All three components were well suited to separate the BL class as it does not overlap any other cluster in either plot.
+
+#Summary answer
+The sPLS-DA plot (a) shows the relationships between the different groups based on the optimised variables in components 1 and 2, with 95% confidence ellipses. Variables in sPLS-DA are selected for their ability to best discriminate between annotated groups of interest. Plot (b) displays the same as plot (a) except with components 1 and 3 instead of 1 and 2.
+
+Figure 7:
+Figure 7 depicts the expression levels of each gene (selected for component construction) for every sample. Euclidean distance with a complete agglomeration method were used to yield this CIM. It can be seen that certain sets of genes had homogeneous expression for different classes. For example, nearly half of the genes had high expression with the EWS (blue) tumour.
+
+#Summary answer
+The CIM combines the variables from all 3 components to display a normalised representation of up- and down-regulated gene expression from selected features resulting from sPLS-DA. This can be edited to show individual components, or different component selections. Groups are visualised according to different coloured bands (left-side y-axis), and hierarchical clustering is visible on the left y- and top x-axis. Sample names are listed on the right-side y-axis, and variable (gene) names on the bottom x-axis.
+
+Figure 9:
+Figure 9 depicts this. By considering both the correlation circle plot and the sample plot (Figure 6(a)), a group of genes with a positive correlation with component 1 (EH domain, proteasome etc.) are observed to be associated with the BL samples. Two groups of genes are either positively or negatively correlated with component 2. These genes are likely to characterise either the NB and RMS classes, or the EWS class.
+
+#Summary answer
+Circle plots enable the visualization of positively- and negatively-correlated variables from selected components in the optimized sPLS-DA model (in this case, components 1 and 2). Importantly, only the variable names of selected features from sPLS-DA are displayed. Circle plots can be informative for inferring relationships between variable clusters (e.g., genes/proteins) if used in conjunction with sample plots such as Figure 6.
