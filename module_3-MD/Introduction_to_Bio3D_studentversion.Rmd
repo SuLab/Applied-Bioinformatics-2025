@@ -1,0 +1,210 @@
+---
+title: "Introduction to Bio3D - MD Analysis (Part 1)"
+author: "Charles Min, Andrew Su"
+date: "February 9, 2025"
+output: html_notebook
+---
+
+### Installation
+In this notebook, we'll go over the basics of using Bio3D, an open-source R package used to analyze protein structures, including MD simulations. You can learn more about the package on the package [website](http://thegrantlab.org/bio3d/). Follow the installation guide outlined in the [Bitbucket](https://bitbucket.org/Grantlab/bio3d/src/master/) to download the package (for newer versions, the install.packages() function don't work). The bio3d.cna and bio3d.nma vignettes are also available for download via bitbucket, but before doing so, you will need to have had bio3d-core installed. When asked, select the CRAN-only. See below: 
+
+```{r}
+library(devtools)
+install.packages("bio3d", dependencies=TRUE) 
+devtools::install_bitbucket("Grantlab/bio3d/bio3d-core", ref="core")
+devtools::install_bitbucket("Grantlab/bio3d-cna")
+devtools::install_bitbucket("Grantlab/bio3d-nma")
+```
+
+### Introduction
+
+Whenever you're dealing with analyzing simulations, there's two files you must always have: 1) topology file and 2) trajectory file. Simply put, a topology file contains descriptors of the *static* properties of your system (e.g. what atoms or bonds make up the system). A trajectory file contains the *dynamic* properties - the time-dependent positions (sometimes velocities) of each atom in the system. 
+
+There are a host of different analysis tools and simulation engines out there, and as you can expect, they have their own unique file formats so it's important to be aware of what type of files to use. Bio3D will generally use the *.pdb* file as the topology and the files with the *.dcd* extension is your trajectory file. 
+
+### Loading your files into Bio3D
+```{r}
+library(bio3d) 
+library(bio3d.cna) # special vignettes of Bio3D - we'll need this for the 'Dynamic network analysis' portion of the notebook
+
+# In R Markdowon, the current working directory inside a notebook is always the directory containing the notebook.
+
+# set relative path to input files
+topology_file <- "Data/E2_bound_ER.pdb" 
+trajectory_file <- "Data/E2_bound_ER.dcd" 
+
+# read in topology/trajectory of desired system
+topology <- suppressWarnings(read.pdb(topology_file))
+trajectory <- suppressWarnings(read.dcd(trajectory_file))
+
+print(topology)
+```
+Note that the topology object have several attributes. Let's examine the structure of our object using Bio3D's built-in variable objects: $atom and $xyz. 
+```{r}
+print(topology$atom)
+print(topology$xyz)
+```
+
+Now, let's take a look at the trajectory file we imported. Note the difference in dimensions between the dataframes.
+
+```{r}
+print(trajectory)
+```
+
+Before we start analyzing our simulations, we must perform a critical pre-processing step for our MD simulation. Our protein is being simulated in a dynamic environment (in our case, water), and you can imagine our protein will undergo global movement and rotation as a natural consequence of that. In order to remove the overall translational motion so that we can focus on the meaningful structural changes, we perform structural alignment using Bio3D's fit.xyz() command. 
+```{r}
+alpha_carbon = atom.select(topology, elety = "CA")
+
+xyz <- fit.xyz(fixed=topology$xyz, # numeric vector of fixed coordinates
+               mobile=trajectory, # numeric vector of mobile coordinates
+               fixed.inds=alpha_carbon$xyz, # elements of fixed upon which fitting should be based
+               mobile.inds=alpha_carbon$xyz # elements of mobile upon which fitting should be based
+)
+```
+
+
+### Atom-selection
+Understanding how the atom.select() function works is important in exploiting all that the Bio3D package has to offer. Simply put, atom.select() is a way of specifying which atoms you want to designate as part of the analysis. As you can expect, there are several reasons for why this is useful/necessary. The most important reason is due to the hydrogens in the system. Hydrogen's low mass gives them a frequency vibration of about 0.5fs. The timesteps (time between frames) that MD simulations use typically are in the 2fs range. Therefore, simulations can't explicitly model the behavior of the hydrogens, therefore are less accurate than other heavy atoms. This atom.select() feature also comes in handy when you're working with large proteins (>200kDa) and do not have the computational resources to analyze every atom in the system!
+
+This might be a great point to quickly review some intro biochemistry - recall that amino acids consist of a central alpha carbon bonded to four groups: an amino group (-NH2), a carboxyl group (-COOH), a hydrogen atom, and a unique side chain (R-group) that determines its properties. 
+
+```{r}
+# Select all alpha-Carbons 
+alpha_carbon = atom.select(topology, elety = "CA", verbose=T) 
+
+# Select all atoms that make up the backbone of your protein system
+backbone_atoms = atom.select(topology, elety = c("N", "CA", "C", "O"), verbose=T)
+
+# Select residues 1-50 and residue 180-220
+example_selection = atom.select(topology, resno = c(1:50,180:220), verbose=T)
+
+# Use the "AND" and "OR" operators to combine (either by intersection or union) multiple selections
+# Select the alpha carbon atoms of residues 1-50 (AND = combine by intersection)
+sample_AND_operator = atom.select(topology, elety = "CA", operator="AND", resno = 1:50, verbose=T)
+
+# Select alpha carbons and all the leucines in the protein (OR = combine by union)
+sample_OR_operator = atom.select(topology, elety = "CA", operator="OR", resid = "LEU", verbose=T)
+
+```
+
+**In-class exercise:** Select all the atoms that make up the ligands (Hint: check the PDB file)
+```{r}
+
+```
+
+
+Other string shortcuts include: "calpha", "back", "backbone", "cbeta", "protein", "notprotein", "ligand", "water", "notwater", "h", "noh", "nucleic", and "notnucleic". From my experience, this doesn't work well with MD simulations as it does with PDB files, given that most of the "meta" data designations get removed during simulations. But if you're ever using Bio3D to analyze PDB files from structural studies, this may be useful!
+
+### RMSD
+The Root-Mean-Square Deviation (RMSD) is a measure of the average distance between the atoms of two superimposed structures, usually comparing the structure at a particular frame of the simulation to a reference structure (often the initial frame). It helps assess how much a structure deviates over time.
+\begin{align*}
+$\text{RMSD}(t) = \sqrt{\frac{1}{N} \sum_{i=1}^{N} \left( \vec{r}_i(t) - \vec{r}_i^\text{ref} \right)^2 }$
+\end{align*}
+Where:
+
+\begin{align*}
+N & : \text{Number of atoms} \\
+\vec{r}_i(t) & : \text{Position of atom } i \text{ at time } t \\
+\vec{r}_i^\text{ref} & : \text{Position of atom } i \text{ in the reference structure} \\
+\end{align*}
+
+```{r}
+# the rmsd(a, b) function has two key arguments: 
+# a = vector containing the reference coordinates (we use the first frame as the reference)
+# b = vector containing the coordinates to be compared to a
+rd <- rmsd(xyz[1,alpha_carbon$xyz], xyz[,alpha_carbon$xyz])
+
+# Let's plot!
+plot(rd, typ="l", ylab="RMSD", xlab="Frame No.")
+points(lowess(rd), typ="l", col="red", lty=2, lwd=2)
+
+hist(rd, breaks=40, freq=FALSE, main="RMSD Histogram", xlab="RMSD")
+lines(density(rd), col="gray", lwd=3)
+```
+
+
+**In-class exercise:** Plot the RMSD of the system when using all atoms instead of just the alpha carbons. Let's ignore the coactivator peptide and ligand for now so just residues 1 to 480. Calculations might take 2-3 minutes to run. 
+```{r}
+
+```
+
+### RMSF
+The Root-Mean-Square Fluctuation (RMSF) measures the flexibility of individual atoms over the course of a simulation. Unlike RMSD, which looks at the entire structure, RMSF focuses on how much each atom fluctuates around its average position during the simulation.
+\begin{align*}
+$\text{RMSF}_i = \sqrt{\frac{1}{T} \sum_{t=1}^{T} \left( \vec{r}_i(t) - \langle \vec{r}_i \rangle \right)^2 }$
+\end{align*}
+Where:
+
+\begin{align*}
+T & : \text{Total number of time steps} \\
+\langle \vec{r}_i \rangle & : \text{Average position of atom } i \text{ over all time steps}
+\end{align*}
+
+```{r}
+rf <- rmsf(xyz[,alpha_carbon$xyz])
+```
+
+**In-class exercise:** 1. Plot the per-residue RMSF of the system. How does the RMSD and RMSF of the protein complex relate to the secondary structure of the protein? (Hint: You can use PyMOL to visualize your protein)
+2. Our system is composed of a homodimer (two identical chains). Is the observed dynamics of chain A the same as chain B? 
+```{r}
+
+```
+
+
+### Cross-correlation analysis
+Every atom in the simulation is vibrating/moving and sometimes (many times) it might be of interest to assess which atoms are moving together (or in opposite ways). We call this correlated motion and it's an important way to understand how the protein is behaving. 
+
+The correlation coefficient \( C_{ij} \) between the displacement vectors \( \vec{r}_i(t) \) and \( \vec{r}_j(t) \) is given by:
+\begin{align*}
+C_{ij} = \frac{\langle (\vec{r}_i(t) - \langle \vec{r}_i \rangle) \cdot (\vec{r}_j(t) - \langle \vec{r}_j \rangle) \rangle}{\sqrt{\langle (\vec{r}_i(t) - \langle \vec{r}_i \rangle)^2 \rangle \langle (\vec{r}_j(t) - \langle \vec{r}_j \rangle)^2 \rangle}}
+\end{align*}
+
+Where:
+
+- \( \vec{r}_i(t) \) and \( \vec{r}_j(t) \) are the displacement vectors of atoms \( i \) and \( j \) at time \( t \).
+- \( \langle \vec{r}_i \rangle \) is the time-averaged displacement vector of \( \vec{r}_i \).
+- The numerator represents the covariance of the displacement vectors, and the denominator normalizes it by the standard deviations.
+Thankfully, we don't have to run these calculations ourselves. We can use Bio3D's handy dccm() function. 
+
+```{r}
+# Calculate the dynamic cross correlation matrix for the simulation using the dccm() function. 
+cij<-dccm(xyz[,alpha_carbon$xyz])
+
+# set custom color palette for better visualization
+col.scale <- colorRampPalette(c("blue", "white", "red"))
+plot(cij, col.regions=col.scale)
+```
+
+### Dynamic network analysis
+Many proteins are allosteric proteins, i.e. a molecular event at one site (the allosteric site) induces conformational or functional changes at a different, often distant, site (the active site). This communication between distant sites is fundamental to many biological processes, such as enzyme regulation, signal transduction, and molecular recognition.
+
+One of the ways in which we can study allostery in proteins is to think of proteins as graphs composed of a series of nodes and edges. Nodes represent residues/atoms and edges represent the interactions between the residues/atoms. By this logic, we can study how allosteric signals are transmitted throughout the protein by thinking of our system as a graph of nodes and edges. This analysis is called dynamic network analysis (DNA). We can use the cross-correlation analysis in the previous section as a starting point. We can use the simple cna() command to convert our cross-correlation matrix into a correlation network. 
+
+```{r}
+network <- cna(cij)
+```
+
+Once we've defined our network, we can look at specific allosteric paths between distal sites of the protein. Let's take two random sites as an example: residue 10 and residue 190. To see if there any meaningful allosteric paths, we can check to see if there are **suboptimal paths** between the two residues. Suboptimal paths are routes in the network that are not the shortest (optimal) but may exist within the network constraints.These paths capture multiple possible ways the signal can propagate. 
+```{r}
+path_between_res10_res190 <- cnapath(network, from=10, to=190, k=500) 
+# What is this k value? What happens if we use k = 10 vs 500?
+
+print(path_between_res10_res190)
+plot(path_between_res10_res190, label='10 to 190', pdb=topology)
+
+# For those of you who are curious to see what these pathways look like, you can use VMD: 
+vmd(path_between_res10_res190, pdb=topology, col='cyan')
+```
+A path in a network is a sequence of edges connecting two sites. The path length is determined by summing the weights of these edges. In the context of molecular networks, edges can be weighted by the correlation coefficient. Basically, longer paths indicate weaker coupling between residues.
+
+Node Degeneracy: this is a measure of the importance of a residue in the network. Normalized node degeneracy represents the fraction of suboptimal paths (alternative paths that are not necessarily the shortest) passing through a specific residue. Higher node degeneracy suggests that a residue plays a crucial role in mediating communication between other residues.
+
+
+**In-class exercise:** 1. Identify allosteric paths between the ligand's hydroxyl group and helix 12 (pick any alpha carbon on H12). Are there differences between the two monomers? (just use alpha carbons for analysis to save time on analysis)
+```{r}
+
+```
+2. Based on your cross-correlation analysis, identify two regions in the system that have a high absolute correlation value. Then identify potential allosteric paths between these two sites. 
+```{r}
+
+```

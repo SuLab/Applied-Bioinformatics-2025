@@ -1,0 +1,39 @@
+---
+title: "Module 3, Homework 1 (DUE: March 6, 2025)"
+output: html_notebook
+---
+
+#### Q1. Estradiol is a high affinity, native ligand for the estrogen receptor. Which stabilizing interactions might be responsible for the ligand's high affinity? Now, look up the common drugs – selective estrogen receptor modulators/degraders (SERM/SERDs) – used for breast cancer treatment. What can you tell about the drug design strategies that have gone into designing these breast cancer drugs? 
+
+*Type your answer in plain text...*
+
+#### Q2: The surface between Chain A and B is called the dimer interface and is known to regulate allosteric signaling. This is a key regulatory surface in heterodimeric nuclear receptors, where ligand binding on one chain propagates signals towards the other chain. Using CPPTRAJ, what are the main interactions that take place in the estradiol bound ER dimer interface? 
+
+```{bash}
+# CPPTRAJ CODE
+```
+
+*Type your answer in plain text...*
+
+#### Q3: CPPTRAJ has two related commands: ***surf*** and ***molsurf***. What are the differences between the two? Try both commands on the SRC2 binding surface of both chains and see if there's a difference. 
+
+```{bash}
+# CPPTRAJ CODE
+```
+
+*Type your answer in plain text...*
+
+#### Q4: Let's combine the toolsets we've acquired from CPPTRAJ with ones from Bio3D. Are there allosteric pathways between the ligand and the SRC2 peptide? And what are the specific interactions that mediate that signaling pathway? 
+```{r}
+# R CODE
+```
+
+```{bash}
+# CPPTRAJ CODE
+```
+
+*Type your answer in plain text...*
+
+#### Q5: Look up the chemical structure of Resveratrol. It's commonly found in grapes and wine and is classified as a phytoestrogen, meaning they can have estrogen-like physiological effects. Based on your structural assessment of how estradiol binds to the estrogen receptor, would you predict Resveratrol to have a higher or lower affinity than estradiol? Why? 
+
+*Type your answer in plain text...*
