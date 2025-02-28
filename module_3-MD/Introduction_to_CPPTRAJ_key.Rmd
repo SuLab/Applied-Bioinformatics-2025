@@ -1,0 +1,106 @@
+---
+title: "Introduction to CPPTRAJ - MD Analysis (Part 2)"
+author: "Charles Min, Andrew Su"
+date: "March 4, 2025"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+### Introduction
+In this notebook, we'll go over the basics of using CPPTRAJ. CPPTRAJ is the standard module that's used alongside Amber to process and analyze simulation data. While there are some overlapping features with Bio3D, there are some unique features that make it useful to use alongside Bio3D. It uses its own scripting command language that's fairly intuitive so no specific programming knowledge is needed, though a surface-level knowledge of shell commands is necessary, given that we'll be using CPPTRAJ as a terminal module. 
+
+We first want to request a parititon on the HPC: 
+```{bash}
+srun --pty bash
+```
+
+
+In order to call CPPTRAJ, simply load your Amber module and type: 'cpptraj'
+
+```{bash}
+module load amber
+cpptraj
+```
+
+### Loading your files into CPPTRAJ
+Recall that in Bio3D, we used the **.pdb** and **.dcd** files as our topology and trajectory files, respectively. In CPPTRAJ, the trajectory file remains the same but we use the **.prmtop** file as our topology instead. You can think of the PDB file as the simple 3D atomic structure of a molecule whereas the prmtop file is more detailed, containing informations about atom types/connectiviely, force field parameters, etc. While you could just as easily use the **.prmtop** file for Bio3D, the package has some other cool features that weren't discussed that utilize the pdb format. 
+
+```{bash}
+[user@computer ~]$ cpptraj
+
+CPPTRAJ: Trajectory Analysis. V14.05
+    ___  ___  ___  ___
+     | \/ | \/ | \/ | 
+    _|_/\_|_/\_|_/\_|_
+> parm E2_bound_ER.prmtop
+> trajin E2_bound_ER.dcd
+```
+
+### Identifying protein-protein or ligand-protein interactions
+
+Understanding which interactions dictate the dynamics of your system of interest is key part of MD simulations. There's a lot of nuances to consider (what kind of interactions are we interested in? are strong interactions necessarily a stable one? etc.), but CPPTRAJ offers a couple of analysis commands that may be of interest. The first is the **nativecontacts** command which identifies contacts based on a user-defined cutoff (Note: typical hydrogen bonds are between 2.7 - 3.3Angstroms while Van der Waals contacts may go up to 4Angstroms). See the documentation for the nativecontacts function: https://amberhub.chpc.utah.edu/nativecontacts/. 
+
+```{bash}
+> nativecontacts name NC1 :196-225&!@H= :436-465&!@H=  writecontacts native-contacts.dat resout resout.dat distance 3.3 byresidue out all-residues.dat mindist maxdist map mapout gnu contactpdb contactspdb.pdb series seriesout native-contacts-series.dat
+> run
+```
+
+Take a look at the documentation and see what the purpose of each parameter. Pay attention to the import ones including the atom select mask (":196-225&!@H=") resout, writecontacts, and seriesout. Play around with different parameter settings and see how your output changes. 
+
+We can also use the **hbond** command to identify hydrogen bonds within our system. https://amberhub.chpc.utah.edu/hbond/ An example use: 
+```{bash}
+> hbond contacts :1-502 avgout hbond_avg.dat series uuseries hbond.gnu nointramol
+> run
+```
+
+**In-class exercise:** The steroid receptor coactivator 2 (SRC2) peptide refers to the small protein bound to the surface of ER and plays a vital role in mediating transcriptional activation of estrogen receptor. The SRC2 peptide contains a LxxLL motif, a highly conserved peptide binding sequence motif found in nuclear receptors. Once bound to ER, it helps facilitate recruitment of transcriptional machinery. Characterize the interaction between SRC2 and ER-LBD in the simulation. 
+
+```{bash}
+> nativecontacts name NC1 :1-240 :481-490 \   
+    writecontacts native-contacts.dat \   
+    resout resout.dat \   
+    distance 4.0 \ 
+    byresidue out all-residues.dat mindist maxdist \
+    map mapout gnu \
+    contactpdb contactspdb.pdb \
+    series seriesout native-contacts-series.dat
+> run
+```
+
+### Radius of gyration (Rg)
+The radius of gyration (\(R_g\)) is defined as:
+
+\begin{align*}
+R_g = \sqrt{\frac{\sum_{i=1}^N m_i (\mathbf{r}_i - \mathbf{r}_{\text{cm}})^2}{\sum_{i=1}^N m_i}}
+\end{align*}
+
+Where:
+
+- \(N\) is the number of atoms.
+- \(m_i\) is the mass of the \(i\)-th atom.
+- \(\mathbf{r}_i\) is the position vector of the \(i\)-th atom.
+- \(\mathbf{r}_{\text{cm}}\) is the center of mass of the system.
+
+Simply, Rg measures the compactness of our system. A smaller Rg would indicate a compact, stable system whereas a larger Rg might suggest a system is more dynamics. While it's not a metric applicable to all systems, this might be relevant in questions of protein folding, secondary structure shifts, etc.
+
+```{bash}
+> radgyr :1-240&!(@H=) out RoG.dat mass nomax
+> run
+```
+**In-class exercise:** Read in the dataframe containing Rg information and use fitting visualization tool to plot the data. 
+```{r}
+rog_df <- read.table('Data/RoG.dat', header = TRUE)
+plot(rog_df, type = 'l', ylab = "Radius of Gyration", xlab = "Frame")
+```
+
+### Surface area 
+One of the most common applications of surface area calculations in MD simulations is the study of protein-ligand binding and solvation effects. When a ligand binds to a protein, the system's solvent-accessible surface area (SASA) changes. This change correlates with the desolvation penalty and hydrophobic interactions, which are critical factors in binding affinity. Surface area calculations can help quantify these changes and provide insights into the binding mechanism.
+
+```{bash}
+> surf :1-240 out demo_surf.dat
+> run
+```
+
+The simple surf command requires an atom mask (:1-250 or any other selection you want) and an output file to write the results to. 
+
