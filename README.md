@@ -56,3 +56,20 @@ for all other packages, you should be able to use `install.packages` as normal.
 
 ### 2025-01-28
 * [Genotype-Phenotype Associations - Intro](https://docs.google.com/presentation/d/1CcGaAceNjFeHXAEtAsvs0kI32zChtmsM/edit?usp=drive_link&ouid=117620351523798089230&rtpof=true&sd=true)
+
+### 2025-02-20
+* [Molecular Dynamics - Intro](https://drive.google.com/file/d/1ahiGGM_A6vWYW4kSuYEs62m5AIDHoXEA/view?usp=drive_link)
+
+### 2025-02-25
+* [Molecular Dynamics - Analysis](https://drive.google.com/file/d/1obwQ38xUgJ8VQAA01rRIO8mL_Qi2oxX1/view?usp=drive_link)
+
+### 2025-03-04
+* [Molecular Dynamics - Analysis_Part2](https://drive.google.com/file/d/19l64DRIXQXDhl6e19u_RbAOY-tO7lA9K/view?usp=drive_link)
+
+
+
+
+
+
+
+
